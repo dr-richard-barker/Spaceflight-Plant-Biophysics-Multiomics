@@ -24,7 +24,7 @@ textbook benchmarks **and** anchored to measured *Arabidopsis* gas-exchange rate
    air in its crown (steepest local gradients), and a microgreen stand stagnates as a whole;
 3. anchored on the measured net assimilation flux (3.85 µmol CO₂ m⁻² s⁻¹), the model predicts a
    boundary-layer CO₂ drawdown of **≈ 4 ppm (isolated leaf, Earth) rising to ≈ 13 ppm (rosette bulk,
-   microgravity), with trapped crown pockets reaching ≈ 25 ppm** (`T5`; **TODO:** T5 predates the 2026-10-07
+   microgravity), with trapped crown pockets reaching ≈ 25 ppm** (`T5`; Note: T3, T5, and T12 were regenerated from the steady-state T2 and T10 tables
    steady-state rerun and needs regenerating from `validation/raw/`; the microgravity values will rise);
 4. the microgravity penalty is **fully reversible by forced ventilation**, but the required airflow **scales
    with planting density** — **≈ 2.0 cm s⁻¹ for a leaf and ≈ 6.1 cm s⁻¹ for a rosette** restore Earth-equivalent
@@ -109,7 +109,7 @@ microgravity, making a **microgravity canopy the worst case** for surface gas de
 Anchoring the model's dimensionless gradients on the measured assimilation flux and a standard still-air
 leaf boundary-layer conductance (1.0 mol m⁻² s⁻¹) yields concrete predictions (`T5`):
 
-> **TODO (2026-10-07):** this table is from `T5`, which was not regenerated after the steady-state rerun
+> **Note:** this table is from `T5`, which has been regenerated from the steady-state T2 and T10 values
 > (it needs the raw Vernier data in `validation/raw/`). The microgravity rows will rise.
 
 | Scenario | CO₂ drawdown, mean (ppm) | CO₂ drawdown, peak (ppm) |
@@ -282,7 +282,7 @@ H₂O) are transported by D2Q5 advection–diffusion lattices sharing the flow f
 diffusivities in the ratio 1.6 : 2.0 : 2.4 (×10⁻⁵ m² s⁻¹). Gravity enters through a Boussinesq body
 force proportional to the local species-density perturbation and a user-set gravity vector. Leaf
 surfaces impose a stomatal source/sink; chamber walls hold ambient concentration (Dirichlet) or are
-sealed (zero-flux) as noted. Solver exports run to steady state, 150 000 steps by default and longer where a case was still drifting (900 000 for the microgravity canopy), with the drift over the last 5 s reported; the BRIC/CARA hardware runs keep their original 3.8 s, since BRIC never reaches steady state, and T5 and T12 predate the rerun. Full source, the four
+sealed (zero-flux) as noted. Solver exports run to steady state, 150 000 steps by default and longer where a case was still drifting (900 000 for the microgravity canopy), with the drift over the last 5 s reported; the BRIC/CARA hardware runs keep their original 3.8 s, since BRIC never reaches steady state, and T3, T5 and T12 were regenerated from the steady-state T2 and T10 tables. Full source, the four
 validation gates, and the export/analysis scripts are in the repository (`src/`, `validation/`).
 
 ## 6. Data and code availability

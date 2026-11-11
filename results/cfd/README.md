@@ -48,7 +48,7 @@ gravity × canopy-scale predictions of surface O₂/CO₂/H₂O gradients.
 > from `feedback_test.ts` console output; its µg and VEGGIE rows predate both fixes). The July slide deck (NotebookLM-generated)
 > has been retired to `archive/2026-07-deck/` (superseded, do not cite) and replaced by a deck built from these
 > tables, linked from that folder's README. `MANUSCRIPT.md`, `manuscript.tex`, `DISCUSSION.md`
-> and `MANUSCRIPT.docx` were updated to the new values, with TODOs where T5 is unverified (reference 5 was resolved on 2026-10-09).
+> and `MANUSCRIPT.docx` were updated to the new steady-state values (reference 5 was resolved on 2026-10-09).
 
 **Assembled manuscript:** [`MANUSCRIPT.md`](MANUSCRIPT.md) (full paper, figures embedded) ·
 [`manuscript/manuscript.tex`](manuscript/manuscript.tex) (npj-style LaTeX draft, compile instructions in
