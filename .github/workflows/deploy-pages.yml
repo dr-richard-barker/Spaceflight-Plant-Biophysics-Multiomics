@@ -29,7 +29,7 @@ jobs:
 
       - name: Install dependencies and build Vite bundle (includes public/paper.html and public/explorer/)
         run: |
-          npm ci
+          npm install
           npm run build -- --base=/Spaceflight-Plant-Biophysics-Multiomics/
 
       - name: Upload Pages artifact

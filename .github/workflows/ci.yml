@@ -21,7 +21,7 @@ jobs:
 
       - name: Install Node dependencies & run 4 LBM benchmark gates
         run: |
-          npm ci
+          npm install
           npm run gates
           npm run build
 
