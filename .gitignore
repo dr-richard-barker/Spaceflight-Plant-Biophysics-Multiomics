@@ -1,0 +1,29 @@
+# Node / Vite
+node_modules/
+dist/
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Large raw OSDR / Vernier cache files fetched on demand
+validation/raw/
+data/osd522/raw/
+data/ladder/*/raw/
+
+# LaTeX build intermediates (keep compiled main.pdf and supplementary.pdf)
+manuscript/*.aux
+manuscript/*.bbl
+manuscript/*.blg
+manuscript/*.fdb_latexmk
+manuscript/*.fls
+manuscript/*.log
+manuscript/*.out
+manuscript/*.spl
+manuscript/*.synctex.gz
+
+data/cache/

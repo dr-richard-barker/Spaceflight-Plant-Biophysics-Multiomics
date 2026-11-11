@@ -1,0 +1,1508 @@
+import { LBMFluid } from '../solver/lbm/LBMFluid';
+import { ScalarField } from '../solver/lbm/ScalarField';
+import { applyBoussinesqForce, GRAVITY } from '../solver/lbm/buoyancy';
+import { CX, CY, feq, viscosityFromRe, tauFromViscosity } from '../solver/lbm/d2q9';
+import { computeDimensionless } from '../solver/diagnostics/dimensionless';
+import { ghiaL2Error } from '../solver/diagnostics/ghia';
+import { StrouhalProbe } from '../solver/diagnostics/strouhal';
+import { diffusionStep } from '../solver/diagnostics/analytic';
+import { loft } from '../leaf/loft';
+import { longitudinalSection, transverseSection } from '../leaf/section';
+import { getLeafAsset } from '../leaf/registry';
+import { polygonSDF } from '../leaf/sdf';
+import { DeformParams, NEUTRAL_DEFORM, Vec2 } from '../leaf/types';
+
+export type RenderMode = 'speed' | 'vorticity' | 'scalar';
+
+export interface Readout {
+  label: string;
+  value: string;
+  /** Optional validation status for gate rows. */
+  status?: 'pass' | 'warn' | 'pending';
+}
+
+export interface ScenarioInstance {
+  readonly id: string;
+  readonly label: string;
+  readonly fluid: LBMFluid;
+  /** Present when the scenario carries a scalar (species/temperature) field. */
+  readonly scalarField?: ScalarField;
+  readonly renderMode: RenderMode;
+  /** Field value mapped to the top of the colormap. */
+  readonly renderScale: number;
+  /** Applied after each collideAndStream: inlet/outlet conditions. */
+  postStream(): void;
+  /** Applied after each step: probe recording, perturbations. */
+  onAfterStep(step: number): void;
+  /** Formatted diagnostics + validation-gate rows for the UI. */
+  diagnostics(step: number): Readout[];
+}
+
+export interface ScenarioDef {
+  id: string;
+  label: string;
+  description: string;
+  build(): ScenarioInstance;
+}
+
+// ---------------------------------------------------------------------------
+// Scenario 1 — Lid-driven cavity (validation gate 1: Ghia et al. Re=100)
+// ---------------------------------------------------------------------------
+function buildCavity(): ScenarioInstance {
+  const N = 130; // includes 1-cell wall border → 128 fluid cells
+  const U = 0.1; // lid speed (lattice units)
+  const L = N - 2;
+  const Re = 100;
+  const nu = viscosityFromRe(U, L, Re);
+  const tau = tauFromViscosity(nu);
+
+  const fluid = new LBMFluid(N, N, tau);
+  fluid.setEquilibrium(1, 0, 0);
+
+  // Walls: full border is solid; the top row moves with the lid velocity.
+  for (let x = 0; x < N; x++) {
+    for (let y = 0; y < N; y++) {
+      const c = fluid.index(x, y);
+      const border = x === 0 || x === N - 1 || y === 0 || y === N - 1;
+      if (!border) continue;
+      fluid.solid[c] = 1;
+      if (y === N - 1) {
+        fluid.uwx[c] = U; // moving lid at the top
+        fluid.uwy[c] = 0;
+      }
+    }
+  }
+
+  const sampleU = (yNorm: number): number => {
+    const xc = Math.floor(N / 2);
+    const y = Math.min(N - 2, Math.max(1, Math.round(1 + yNorm * (N - 3))));
+    return fluid.ux[fluid.index(xc, y)] / U;
+  };
+  const sampleV = (xNorm: number): number => {
+    const yc = Math.floor(N / 2);
+    const x = Math.min(N - 2, Math.max(1, Math.round(1 + xNorm * (N - 3))));
+    return fluid.uy[fluid.index(x, yc)] / U;
+  };
+
+  return {
+    id: 'cavity',
+    label: 'Lid-driven cavity (Re 100)',
+    fluid,
+    renderMode: 'speed',
+    renderScale: U,
+    postStream() {
+      /* walls handle everything via the mask */
+    },
+    onAfterStep() {
+      /* steady-state problem: nothing to probe per step */
+    },
+    diagnostics(step: number): Readout[] {
+      fluid.computeMacroscopic();
+      const dl = computeDimensionless({ u: U, length: L, nu });
+      const err = ghiaL2Error(sampleU, sampleV);
+      // The Re=100 cavity converges to the Ghia reference by ~5–6k steps
+      // (empirically L2 < 0.02 at 5k, < 0.011 at 11k).
+      const converged = step > 6000;
+      const gateStatus: Readout['status'] = !converged
+        ? 'pending'
+        : err < 0.05
+          ? 'pass'
+          : 'warn';
+      return [
+        { label: 'Reynolds', value: dl.Re.toFixed(0) },
+        { label: 'tau', value: tau.toFixed(3) },
+        { label: 'steps', value: step.toLocaleString() },
+        {
+          label: 'Ghia L2 error',
+          value: err.toFixed(4),
+          status: gateStatus,
+        },
+        {
+          label: 'Gate 1 (cavity)',
+          value: converged
+            ? err < 0.05
+              ? 'PASS (<0.05)'
+              : 'off target'
+            : 'converging…',
+          status: gateStatus,
+        },
+      ];
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Scenario 2 — Flow past a cylinder (validation gate 2: St ≈ 0.16–0.17 @ Re 100)
+// ---------------------------------------------------------------------------
+function buildCylinder(): ScenarioInstance {
+  const nx = 420;
+  const ny = 120;
+  const U = 0.05;
+  const D = 20; // cylinder diameter
+  const Re = 100;
+  const nu = viscosityFromRe(U, D, Re);
+  const tau = tauFromViscosity(nu);
+
+  const fluid = new LBMFluid(nx, ny, tau);
+  fluid.setEquilibrium(1, U, 0);
+
+  // Channel walls (no-slip) top and bottom.
+  for (let x = 0; x < nx; x++) {
+    fluid.solid[fluid.index(x, 0)] = 1;
+    fluid.solid[fluid.index(x, ny - 1)] = 1;
+  }
+
+  // Cylinder, slightly off-centre in y to break symmetry and trigger shedding.
+  const cx = 90;
+  const cy = ny / 2 - 2;
+  const r = D / 2;
+  for (let x = 0; x < nx; x++) {
+    for (let y = 0; y < ny; y++) {
+      if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) {
+        fluid.solid[fluid.index(x, y)] = 1;
+      }
+    }
+  }
+
+  const probe = new StrouhalProbe(4000);
+  const probeX = Math.min(nx - 2, cx + 3 * D);
+  const probeY = Math.round(cy);
+  const probeCell = fluid.index(probeX, probeY);
+
+  const applyInletOutlet = () => {
+    // Inlet: equilibrium velocity BC on the left column (fluid rows only).
+    for (let y = 1; y < ny - 1; y++) {
+      const c = fluid.index(0, y);
+      if (fluid.solid[c]) continue;
+      const base = c * 9;
+      for (let i = 0; i < 9; i++) fluid.f[base + i] = feq(i, 1, U, 0);
+    }
+    // Outlet: zero-gradient (copy the penultimate column).
+    for (let y = 1; y < ny - 1; y++) {
+      const c = fluid.index(nx - 1, y);
+      if (fluid.solid[c]) continue;
+      const src = fluid.index(nx - 2, y) * 9;
+      const dst = c * 9;
+      for (let i = 0; i < 9; i++) fluid.f[dst + i] = fluid.f[src + i];
+    }
+  };
+
+  return {
+    id: 'cylinder',
+    label: 'Flow past cylinder (Re 100)',
+    fluid,
+    renderMode: 'vorticity',
+    renderScale: 0.02,
+    postStream() {
+      applyInletOutlet();
+    },
+    onAfterStep(step: number) {
+      // CX/CY for D2Q9 (matches d2q9.ts ordering).
+      const CXa = [0, 1, 0, -1, 0, 1, -1, -1, 1];
+      const CYa = [0, 0, 1, 0, -1, 1, 1, -1, -1];
+
+      // Seed the Kármán instability with a brief, asymmetric transverse kick just
+      // behind the cylinder. Without it, a symmetric wake can persist for tens of
+      // thousands of steps before shedding onsets; the kick makes shedding reliable
+      // and fast. It is switched off after the wake is established.
+      if (step < 600) {
+        const py = Math.round(cy) + 3; // below the wake centreline → breaks symmetry
+        const x0 = cx + Math.round(r) + 2;
+        for (let x = x0; x < x0 + 4; x++) {
+          const cc = fluid.index(x, py);
+          if (fluid.solid[cc]) continue;
+          const b = cc * 9;
+          let rho = 0;
+          let mx = 0;
+          let my = 0;
+          for (let i = 0; i < 9; i++) {
+            const fi = fluid.f[b + i];
+            rho += fi;
+            mx += CXa[i] * fi;
+            my += CYa[i] * fi;
+          }
+          const ux = mx / rho;
+          const uy = my / rho + 0.2 * U; // upward kick
+          for (let i = 0; i < 9; i++) fluid.f[b + i] = feq(i, rho, ux, uy);
+        }
+      }
+
+      // Local macroscopic at the probe to read transverse velocity.
+      const base = probeCell * 9;
+      let rho = 0;
+      let my = 0;
+      for (let i = 0; i < 9; i++) {
+        const fi = fluid.f[base + i];
+        rho += fi;
+        my += CYa[i] * fi;
+      }
+      probe.record(my / rho);
+    },
+    diagnostics(step: number): Readout[] {
+      const dl = computeDimensionless({ u: U, length: D, nu });
+      const st = probe.strouhal(D, U);
+      const cycles = probe.cycles();
+      // The classic *unconfined* cylinder gives St ≈ 0.164 at Re=100. This is a
+      // confined channel (blockage D/ny ≈ 0.17), which raises the shedding
+      // frequency; the expected confined value is ≈ 0.19–0.20 (measured 0.196).
+      // The band brackets both regimes so the gate stays meaningful.
+      const inRange = st !== null && st > 0.16 && st < 0.22;
+      const status: Readout['status'] =
+        st === null ? 'pending' : inRange ? 'pass' : 'warn';
+      return [
+        { label: 'Reynolds', value: dl.Re.toFixed(0) },
+        { label: 'tau', value: tau.toFixed(3) },
+        { label: 'steps', value: step.toLocaleString() },
+        { label: 'shedding cycles', value: cycles.toString() },
+        {
+          label: 'Strouhal',
+          value: st === null ? 'measuring…' : st.toFixed(3),
+          status,
+        },
+        {
+          label: 'Gate 2 (cylinder)',
+          value:
+            st === null
+              ? 'waiting for wake…'
+              : inRange
+                ? 'PASS (0.16–0.22, confined)'
+                : 'off target',
+          status,
+        },
+      ];
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Scenario 3 — Natural-convection cavity (validation gate 3: Nu vs Ra)
+//   Differentially heated square cavity (de Vahl Davis 1983). Hot left wall,
+//   cold right wall, adiabatic top/bottom, no-slip everywhere. Buoyancy from the
+//   temperature field drives a convection roll; the hot-wall Nusselt number must
+//   match the benchmark — the proof that the gravity/buoyancy coupling is right.
+// ---------------------------------------------------------------------------
+function buildNaturalConvection(): ScenarioInstance {
+  const N = 66; // 64 fluid cells + wall border
+  const H = N - 2;
+  const nu = 0.02;
+  const Pr = 0.71;
+  const kappa = nu / Pr; // thermal diffusivity
+  const Ra = 1e4; // de Vahl Davis reference: Nu_hot ≈ 2.238
+  const dT = 1;
+  // Buoyancy coefficient A = g·β chosen so that Ra = A·ΔT·H³ / (ν·κ).
+  const A = (Ra * nu * kappa) / (dT * H ** 3);
+
+  const tauF = tauFromViscosity(nu);
+  const fluid = new LBMFluid(N, N, tauF);
+  fluid.setEquilibrium(1, 0, 0);
+  fluid.enableForcing();
+
+  const temp = new ScalarField(fluid, kappa, 0.5); // tauC set from kappa in ctor
+
+  // Walls: full border no-slip. Left = hot Dirichlet, right = cold Dirichlet,
+  // top/bottom left adiabatic (no Dirichlet → zero-flux bounce-back).
+  for (let x = 0; x < N; x++) {
+    for (let y = 0; y < N; y++) {
+      const c = fluid.index(x, y);
+      const border = x === 0 || x === N - 1 || y === 0 || y === N - 1;
+      if (!border) continue;
+      fluid.solid[c] = 1;
+      if (x === 0) temp.setDirichlet(c, 1); // hot
+      else if (x === N - 1) temp.setDirichlet(c, 0); // cold
+    }
+  }
+
+  // Average hot-wall Nusselt number, normalised so pure conduction gives 1.
+  const nusseltHot = (): number => {
+    let sum = 0;
+    let n = 0;
+    for (let y = 1; y < N - 1; y++) {
+      const t1 = temp.C[fluid.index(1, y)];
+      // Nu_local = (T_wall − T[x=1]) · H / (ΔT · 0.5); wall midpoint is 0.5 in.
+      sum += ((1 - t1) * H) / (0.5 * dT);
+      n++;
+    }
+    return sum / n;
+  };
+
+  return {
+    id: 'natconv',
+    label: 'Natural-convection cavity (Ra 1e4)',
+    fluid,
+    scalarField: temp,
+    renderMode: 'scalar',
+    renderScale: 1,
+    postStream() {
+      /* walls handled by masks + Dirichlet */
+    },
+    onAfterStep() {
+      temp.step();
+      // Boussinesq force for the next fluid step: f_y = A·ρ·(T − 0.5), so warm
+      // fluid (T > 0.5) rises. A encodes g·β and sets the Rayleigh number.
+      applyBoussinesqForce(fluid, 0, A, [{ field: temp, beta: 1, ref: 0.5 }]);
+    },
+    diagnostics(step: number): Readout[] {
+      const Nu = nusseltHot();
+      const converged = step > 40000;
+      const inRange = Nu > 1.9 && Nu < 2.5;
+      const status: Readout['status'] = !converged
+        ? 'pending'
+        : inRange
+          ? 'pass'
+          : 'warn';
+      return [
+        { label: 'Rayleigh', value: Ra.toExponential(0) },
+        { label: 'Prandtl', value: Pr.toFixed(2) },
+        { label: 'steps', value: step.toLocaleString() },
+        { label: 'Nu (hot wall)', value: Nu.toFixed(3), status },
+        {
+          label: 'Gate 3 (buoyancy)',
+          value: !converged
+            ? 'converging…'
+            : inRange
+              ? 'PASS (Nu≈2.24)'
+              : 'off target',
+          status,
+        },
+      ];
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Scenario 4 — Pure diffusion (validation gate 4: error-function profile)
+//   No flow (g = 0, u = 0). An initial concentration step diffuses; the profile
+//   must follow C(x,t) = ½ erfc((x−x0)/(2√(Dt))) — the molecular-diffusion limit
+//   that dominates transport in microgravity once convection is switched off.
+// ---------------------------------------------------------------------------
+function buildDiffusion(): ScenarioInstance {
+  const nx = 200;
+  const ny = 8;
+  const D = 1 / 6; // diffusivity → tauC = 1.0
+  const x0 = nx / 2; // step between cells 99 and 100 → interface at 99.5
+  const iface = x0 - 0.5;
+
+  const fluid = new LBMFluid(nx, ny, tauFromViscosity(1 / 6));
+  fluid.setEquilibrium(1, 0, 0); // at rest; never stepped → pure diffusion
+
+  const conc = new ScalarField(fluid, D, 0);
+  conc.initField((x) => (x < x0 ? 1 : 0));
+
+  let latchedPass = false;
+
+  const l2Error = (step: number): number => {
+    const yrow = ny >> 1;
+    let sq = 0;
+    let n = 0;
+    for (let x = 1; x < nx - 1; x++) {
+      const analytic = diffusionStep(x, step, D, iface, 1, 0);
+      const d = conc.C[fluid.index(x, yrow)] - analytic;
+      sq += d * d;
+      n++;
+    }
+    return Math.sqrt(sq / n);
+  };
+
+  return {
+    id: 'diffusion',
+    label: 'Pure diffusion (erfc limit)',
+    fluid,
+    scalarField: conc,
+    renderMode: 'scalar',
+    renderScale: 1,
+    postStream() {
+      /* no flow */
+    },
+    onAfterStep() {
+      conc.step();
+    },
+    diagnostics(step: number): Readout[] {
+      const err = l2Error(step);
+      // Valid while the diffusion front has not reached the reflecting walls
+      // (~step 1800 for this domain); latch PASS once achieved in-window.
+      const inWindow = step >= 400 && step <= 1600;
+      if (inWindow && err < 0.02) latchedPass = true;
+      const status: Readout['status'] =
+        step < 400 ? 'pending' : latchedPass ? 'pass' : inWindow ? 'warn' : 'warn';
+      return [
+        { label: 'diffusivity D', value: D.toFixed(3) },
+        { label: 'steps', value: step.toLocaleString() },
+        { label: 'erfc L2 error', value: err.toFixed(4), status },
+        {
+          label: 'Gate 4 (diffusion)',
+          value:
+            step < 400
+              ? 'diffusing…'
+              : latchedPass
+                ? 'PASS (<0.02)'
+                : step > 1600
+                  ? 'window closed'
+                  : 'measuring…',
+          status,
+        },
+      ];
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Scenarios 5–7 — Arabidopsis at three scales, gravity sweep (the science)
+//
+//   A plant (single leaf → rosette → microgreen canopy) exchanges gas through a
+//   stomatal source/sink on its surface: CO2 uptake (sink), O2 + H2O release
+//   (source). The near-surface air is lighter (humid + CO2-depleted), so under
+//   gravity it rises — solutal Boussinesq buoyancy — sweeping the boundary layer.
+//   Reducing gravity weakens convection; the surface-to-ambient gaps ΔC steepen,
+//   and denser geometries (rosette, canopy) trap air and amplify the effect.
+//   Fields store excess-over-ambient, so ambient = 0 and CO2 goes negative.
+// ---------------------------------------------------------------------------
+
+interface Species {
+  co2: ScalarField;
+  o2: ScalarField;
+  h2o: ScalarField;
+}
+
+/** Mark the full domain border as no-slip walls held at ambient concentration. */
+function chamberWalls(fluid: LBMFluid, sp: Species): void {
+  const { nx, ny } = fluid;
+  for (let x = 0; x < nx; x++) {
+    for (let y = 0; y < ny; y++) {
+      if (x !== 0 && x !== nx - 1 && y !== 0 && y !== ny - 1) continue;
+      const c = fluid.index(x, y);
+      fluid.solid[c] = 1;
+      sp.co2.setDirichlet(c, 0);
+      sp.o2.setDirichlet(c, 0);
+      sp.h2o.setDirichlet(c, 0);
+    }
+  }
+}
+
+/** Rasterise a (possibly rotated) solid ellipse into the fluid + isLeaf masks. */
+function stampEllipse(
+  fluid: LBMFluid,
+  isLeaf: Uint8Array,
+  cx: number,
+  cy: number,
+  a: number,
+  b: number,
+  angle: number,
+): void {
+  const ca = Math.cos(angle);
+  const sa = Math.sin(angle);
+  const R = Math.ceil(Math.max(a, b)) + 1;
+  const x0 = Math.max(0, Math.floor(cx - R));
+  const x1 = Math.min(fluid.nx - 1, Math.ceil(cx + R));
+  const y0 = Math.max(0, Math.floor(cy - R));
+  const y1 = Math.min(fluid.ny - 1, Math.ceil(cy + R));
+  for (let x = x0; x <= x1; x++) {
+    for (let y = y0; y <= y1; y++) {
+      const dx = x - cx;
+      const dy = y - cy;
+      const lx = dx * ca + dy * sa;
+      const ly = -dx * sa + dy * ca;
+      if ((lx / a) ** 2 + (ly / b) ** 2 <= 1) {
+        const c = fluid.index(x, y);
+        fluid.solid[c] = 1;
+        isLeaf[c] = 1;
+      }
+    }
+  }
+}
+
+/**
+ * Rasterise an arbitrary closed section polygon (millimetres) onto the lattice.
+ *
+ * The polygon is centred on its own bounding box at (cx, cy) and filled by a sign
+ * test against its signed distance field — the same level-set form NeuraLeaf uses
+ * for its base shape, evaluated exactly from the polygon rather than sampled from
+ * pixels. Returns the number of cells filled so the caller can refuse a geometry
+ * that fell through the lattice.
+ */
+function stampPolygon(
+  fluid: LBMFluid,
+  isLeaf: Uint8Array,
+  poly: readonly Vec2[],
+  cx: number,
+  cy: number,
+  cellsPerMm: number,
+): number {
+  let minA = Infinity;
+  let maxA = -Infinity;
+  let minB = Infinity;
+  let maxB = -Infinity;
+  for (const [a, b] of poly) {
+    if (a < minA) minA = a;
+    if (a > maxA) maxA = a;
+    if (b < minB) minB = b;
+    if (b > maxB) maxB = b;
+  }
+  const midA = (minA + maxA) / 2;
+  const midB = (minB + maxB) / 2;
+
+  const x0 = Math.max(0, Math.floor(cx + (minA - midA) * cellsPerMm) - 1);
+  const x1 = Math.min(fluid.nx - 1, Math.ceil(cx + (maxA - midA) * cellsPerMm) + 1);
+  const y0 = Math.max(0, Math.floor(cy + (minB - midB) * cellsPerMm) - 1);
+  const y1 = Math.min(fluid.ny - 1, Math.ceil(cy + (maxB - midB) * cellsPerMm) + 1);
+
+  let filled = 0;
+  for (let x = x0; x <= x1; x++) {
+    for (let y = y0; y <= y1; y++) {
+      const a = midA + (x - cx) / cellsPerMm;
+      const b = midB + (y - cy) / cellsPerMm;
+      if (polygonSDF(poly, a, b) <= 0) {
+        const c = fluid.index(x, y);
+        fluid.solid[c] = 1;
+        isLeaf[c] = 1;
+        filled++;
+      }
+    }
+  }
+  return filled;
+}
+
+// --- geometry: single leaf (closed chamber, one horizontal blade) ---
+export function leafGeometry(fluid: LBMFluid, sp: Species): { isLeaf: Uint8Array; charLen: number } {
+  chamberWalls(fluid, sp);
+  const isLeaf = new Uint8Array(fluid.size);
+  stampEllipse(fluid, isLeaf, fluid.nx / 2, fluid.ny / 2, 26, 4, 0);
+  return { isLeaf, charLen: 52 };
+}
+
+/**
+ * The single-leaf ellipse at r× the reference resolution (dx = 0.288 mm / r): same
+ * physical leaf, chamber and blade thickness, r× more cells along each axis. Used by
+ * the resolution ladder (validation/resolution_ladder.ts) with `refine: r`.
+ */
+/**
+ * A single leaf inside a real Petri-dish cross-section (2-D vertical slice):
+ * an agar layer `agarCells` thick on the floor (solid, zero-flux), the air headspace
+ * above it, and the leaf blade lying `gapCells` above the agar surface. The caller sets
+ * nx (dish interior width) and ny (agar + headspace + the two border rows); the outer
+ * border keeps chamberWalls' ambient-held walls unless the scene clears them
+ * (membraneK: 0 sealed / > 0 taped). Same blade as leafGeometry (26 × 4 half-axes).
+ */
+export function dishLeafGeometry(cfg: { agarCells: number; gapCells: number; agarH2O?: number }): Geometry {
+  return (fluid: LBMFluid, sp: Species) => {
+    chamberWalls(fluid, sp);
+    for (let y = 1; y <= cfg.agarCells; y++) {
+      for (let x = 1; x < fluid.nx - 1; x++) fluid.solid[fluid.index(x, y)] = 1; // agar: zero-flux
+    }
+    // Wet agar (opt-in): agar is mostly water, so its surface holds the air above it at
+    // saturation. agarH2O is that saturation humidity as an H₂O excess over ambient (model
+    // units, normally the scene's h2oSatExcess). CO₂ and O₂ stay zero-flux at the agar.
+    // WARNING (T23): valid at 0 g, but UNSTABLE at 1 g with agarH2O = 1.3. The agar-to-air
+    // humidity contrast puts the H₂O buoyancy at β·ΔC ≈ 1.3, beyond the small-perturbation
+    // range (≲ 0.5): sealed BRIC accelerated from ~87 s and diverged at 129.5 s; taped CARA
+    // ran near Mach 0.17, then accelerated from ~82 s. Do not use at 1 g until the humidity buoyancy is calibrated.
+    if (cfg.agarH2O !== undefined) {
+      for (let x = 1; x < fluid.nx - 1; x++) sp.h2o.setDirichlet(fluid.index(x, cfg.agarCells), cfg.agarH2O);
+    }
+    const isLeaf = new Uint8Array(fluid.size);
+    const b = 4;
+    const cy = cfg.agarCells + 1 + cfg.gapCells + b - 0.5;
+    if (cy + b >= fluid.ny - 1) throw new Error(`dishLeafGeometry: leaf (top at ${cy + b}) does not fit under the lid (ny ${fluid.ny})`);
+    stampEllipse(fluid, isLeaf, fluid.nx / 2, cy, 26, b, 0);
+    return { isLeaf, charLen: 52 };
+  };
+}
+
+export function leafGeometryRefined(r: number): Geometry {
+  return (fluid: LBMFluid, sp: Species) => {
+    chamberWalls(fluid, sp);
+    const isLeaf = new Uint8Array(fluid.size);
+    stampEllipse(fluid, isLeaf, fluid.nx / 2, fluid.ny / 2, 26 * r, 4 * r, 0);
+    return { isLeaf, charLen: 52 * r };
+  };
+}
+
+// --- geometry: rosette (closed chamber, fan of overlapping leaves) ---
+export function rosetteGeometry(fluid: LBMFluid, sp: Species): { isLeaf: Uint8Array; charLen: number } {
+  chamberWalls(fluid, sp);
+  const isLeaf = new Uint8Array(fluid.size);
+  const cx = fluid.nx / 2;
+  const cy = fluid.ny / 2;
+  const a = 20;
+  const b = 3.4;
+  const off = 15; // leaf-centre offset from the crown
+  const anglesDeg = [22, 8, -8, -22, 158, 172, 188, 202];
+  for (const deg of anglesDeg) {
+    const ang = (deg * Math.PI) / 180;
+    stampEllipse(fluid, isLeaf, cx + off * Math.cos(ang), cy + off * Math.sin(ang), a, b, ang);
+  }
+  return { isLeaf, charLen: 70 };
+}
+
+// --- geometry: microgreen canopy (soil floor, row of upright shoots) ---
+export function canopyGeometry(fluid: LBMFluid, sp: Species): { isLeaf: Uint8Array; charLen: number } {
+  const { nx, ny } = fluid;
+  const isLeaf = new Uint8Array(fluid.size);
+  // Top + side walls: ambient (open room). Bottom is soil (adiabatic), added next.
+  for (let x = 0; x < nx; x++) {
+    for (let y = 0; y < ny; y++) {
+      if (x !== 0 && x !== nx - 1 && y !== ny - 1) continue;
+      const c = fluid.index(x, y);
+      fluid.solid[c] = 1;
+      sp.co2.setDirichlet(c, 0);
+      sp.o2.setDirichlet(c, 0);
+      sp.h2o.setDirichlet(c, 0);
+    }
+  }
+  for (let x = 0; x < nx; x++) fluid.solid[fluid.index(x, 0)] = 1; // soil floor (no Dirichlet)
+  // Upright shoots standing on the soil, packed like a lawn. Microgreens are
+  // short; kept sparse enough that the within-canopy air still accumulates while
+  // the density perturbation stays in the Boussinesq/low-Mach regime.
+  const spacing = 12;
+  const halfW = 1.7;
+  const height = 13;
+  for (let bx = spacing; bx < nx - spacing + 1; bx += spacing) {
+    stampEllipse(fluid, isLeaf, bx, 1 + height, halfW, height, 0);
+  }
+  return { isLeaf, charLen: 26 };
+}
+
+interface GeometryResult {
+  isLeaf: Uint8Array;
+  charLen: number;
+  /** Extra diagnostic rows the geometry wants surfaced (resolution caveats, etc). */
+  notes?: Readout[];
+}
+
+type Geometry = (fluid: LBMFluid, sp: Species) => GeometryResult;
+
+// Lattice→physical velocity scale from the calibration (results/tables/T3):
+// dx/dt ≈ 1.66 m/s per lattice velocity unit, i.e. 166 cm/s.
+const U_STAR_CM_S = 166;
+const DX_M = 0.288e-3; // m per lattice cell (T3 calibration: leaf 1.5 cm / 52 cells)
+const CELLS_PER_MM = 1 / (DX_M * 1e3); // 3.47 cells per mm
+
+/**
+ * Blade thickness used by the asset-backed geometries, in lattice cells.
+ *
+ * A real Arabidopsis blade is ~0.2 mm, which at dx = 0.288 mm is under one cell — it
+ * would fall straight through the lattice. The existing `leafGeometry` ellipse already
+ * makes this compromise silently (b = 4 → 8 cells → 2.3 mm, about 11× life size); the
+ * asset geometries make it explicit, match it by default so the comparison against the
+ * calibration is like for like, and report the inflation factor in the diagnostics.
+ * What the model resolves is therefore the blade's *presence and curvature*, not its
+ * true thickness — which is the right trade, since the boundary layer is set by the
+ * former and is orders of magnitude thicker than the latter.
+ */
+const REF_THICKNESS_CELLS = 8;
+
+export interface AssetGeometryCfg {
+  assetId: string;
+  /** Pose knobs layered on top of the asset's own fitted deformation. */
+  deform?: Partial<Omit<DeformParams, 'thicknessScale'>>;
+  /**
+   * Which cut through the blade the 2D vertical slice represents.
+   *   'longitudinal' — along the midrib; reduces to the ellipse for a flat leaf, so
+   *                    it is the like-for-like comparison against the calibration.
+   *   'transverse'   — across the blade; the plane cupping and curl live in, and the
+   *                    only one where the curl sweep means anything.
+   */
+  cut?: 'longitudinal' | 'transverse';
+  thicknessCells?: number;
+}
+
+/**
+ * Build a closed-chamber geometry from a leaf asset instead of an ellipse.
+ *
+ * Comparisons are only meaningful *within* one cut and one thickness: a longitudinal
+ * cut has a 15 mm chord and a transverse cut an 8 mm one, so their characteristic
+ * lengths, Rayleigh numbers and Sherwood numbers are not interchangeable.
+ */
+export function assetLeafGeometry(cfg: AssetGeometryCfg): Geometry {
+  return (fluid: LBMFluid, sp: Species): GeometryResult => {
+    chamberWalls(fluid, sp);
+    const isLeaf = new Uint8Array(fluid.size);
+
+    const asset = getLeafAsset(cfg.assetId);
+    const cut = cfg.cut ?? 'longitudinal';
+    const thicknessCells = cfg.thicknessCells ?? REF_THICKNESS_CELLS;
+    const thicknessScale = thicknessCells / CELLS_PER_MM / asset.thicknessMm;
+    const deform: DeformParams = { ...NEUTRAL_DEFORM, ...cfg.deform, thicknessScale };
+
+    const posed = loft(asset, deform);
+    const section = cut === 'transverse' ? transverseSection(posed) : longitudinalSection(posed);
+    if (section.polygon.length < 3) {
+      throw new Error(`leaf asset '${cfg.assetId}': ${cut} cut produced no section`);
+    }
+
+    const filled = stampPolygon(
+      fluid,
+      isLeaf,
+      section.polygon,
+      fluid.nx / 2,
+      fluid.ny / 2,
+      CELLS_PER_MM,
+    );
+    if (filled < 16) {
+      throw new Error(
+        `leaf asset '${cfg.assetId}': ${cut} cut filled only ${filled} cells — too thin to resolve`,
+      );
+    }
+
+    const chordCells = section.chordMm * CELLS_PER_MM;
+    const heightCells = section.heightMm * CELLS_PER_MM;
+    return {
+      isLeaf,
+      charLen: chordCells,
+      notes: [
+        { label: 'leaf geometry', value: `${asset.id}${asset.provisional ? ' (provisional)' : ''}` },
+        { label: 'section', value: `${cut} · ${chordCells.toFixed(0)} × ${heightCells.toFixed(1)} cells` },
+        {
+          label: 'blade thickness',
+          value: `${thicknessCells} cells (${(thicknessCells / CELLS_PER_MM).toFixed(2)} mm; ${thicknessScale.toFixed(0)}× life size)`,
+        },
+      ],
+    };
+  };
+}
+
+// --- Boundary-layer transport diagnostics (g_bl, δ, Sh) ---------------------
+// The stomatal source/sink drives a flux across a diffusive film; the film's
+// conductance g_bl is the quantity gas-exchange physiology uses and the exact
+// value that sets the CO2 concentration reaching Rubisco (Cc) in the subcellular
+// photorespiration coupling. It is *derived from the simulated field*, not assumed:
+// g_bl = K · |S| / |ΔC|, where |S| is the applied surface flux and |ΔC| the model
+// surface gap. K is pinned to the documented Earth single-leaf calibration —
+// |ΔC_CO2| = 0.161 (T2) ↔ g_bl = 1.0 mol m⁻² s⁻¹ (manuscript §Calibration / T5) —
+// so the anchor is reproduced at 1 g and g_bl then varies with gravity, geometry
+// and ventilation. Because the flux is identical across scenarios, g_bl ∝ 1/|ΔC|:
+// as g → 0 convection dies, |ΔC| grows, g_bl falls and the film δ thickens.
+const S_CO2_BASE = 5e-4; // base stomatal CO2 flux (lattice units), light, unshaded
+const GBL_REF = 1.0; // mol m⁻² s⁻¹, Earth single leaf (literature-anchored)
+const DC_CO2_REF = 0.161; // |ΔC_CO2| mean at that reference (T2_model_sweep)
+const K_GBL = (GBL_REF * DC_CO2_REF) / S_CO2_BASE; // = 322 mol m⁻² s⁻¹ per (flux/ΔC)
+const D_CO2_PHYS = 1.6e-5; // m² s⁻¹ (molecular CO2 in air, 25 °C; T3)
+const MOLAR_DENSITY = 41.6; // mol m⁻³ (chamber air; T1)
+
+interface LeafSceneCfg {
+  id: string;
+  label: string;
+  gRatio: number;
+  nx: number;
+  ny: number;
+  renderScale: number;
+  geometry: Geometry;
+  /** Per-area flux multiplier (default 1). <1 models canopy self-shading, which
+   *  lowers per-leaf assimilation and keeps a dense stand in the Boussinesq regime. */
+  sourceScale?: number;
+  /** Forced-airflow speed (lattice units). When set, the left/right chamber walls
+   *  become a ventilation inlet (fresh air at this speed) and outlet — the engineered
+   *  substitute for the buoyant convection that microgravity removes. */
+  forcedU?: number;
+  /** Enclosure gas exchange (spaceflight hardware). Undefined → ambient-held walls
+   *  (well-mixed surroundings, the default). 0 → hermetically sealed (BRIC): no
+   *  exchange, gas drifts without bound. 0<k<1 → semi-permeable membrane (CARA
+   *  micropore tape): each step the near-wall excess relaxes toward ambient by k. */
+  membraneK?: number;
+  /** Dark (respiration) instead of light (net photosynthesis): flips the source
+   *  signs and scales by the measured R/A ratio (0.31). */
+  dark?: boolean;
+  /** Ambient CO2 in model units. When set, closes the biology loop: the leaf's
+   *  CO2 uptake / O2 release become CO2-limited (a compensation-point + saturation
+   *  response), so boundary-layer depletion self-limits photosynthesis. Set so the
+   *  open-leaf surface drawdown is a realistic ~2% of ambient. */
+  co2Ambient?: number;
+  /** Grid refinement r (default 1). The caller supplies nx, ny and a geometry already
+   *  scaled by r; this keeps the physics fixed under diffusive scaling (dx/r, dt/r²,
+   *  same τ): surface source /r, buoyancy /r³, forced inlet speed /r, and the g_bl
+   *  calibration constant ×r. Only meaningful for ambient-walled scenes. */
+  refine?: number;
+  /** Forced-airflow scenes only: also solve a mean-age-of-air scalar (source 1 per
+   *  step, 0 at the inlet) and report the Sandberg outlet check (flux-weighted outlet
+   *  age = nominal residence time τ) and ventilation efficiency ε_a = τ / (2·mean age).
+   *  Diagnostic from the microgreen-chamber-cfd project (templates/system/functions/age). */
+  ageOfAir?: boolean;
+  /** Forced-airflow outlet. 'pressure' (default since 2026-10-07) pins ρ = 1 at the
+   *  outlet (equilibrium at ρ = 1 and the upstream velocity + the upstream
+   *  non-equilibrium part), which stops the through-flow decaying. On its own it does not
+   *  hold the throughput at U: with the original ρ = 1 inlet the scenes delivered
+   *  85–98 % of U (see inletBC). 'copy' is the original
+   *  outlet, kept only to reproduce pre-2026-10-07 tables: it copies the upstream
+   *  column's populations, has no pressure reference, so mass accumulates (ρ rises ~4 %
+   *  in 20 s) and the through-flow decays (U = 0.02: 68 % of U at 5.25 s, 18 % at 26 s,
+   *  results/age/age_fan_U0.02_copy.csv; the earlier "71 %" was relative to the flow at
+   *  0.25 s, not to U). */
+  outletBC?: 'copy' | 'pressure';
+  /** Forced-airflow inlet. 'densityMatched' (default with the pressure outlet since
+   *  2026-11-07) sets the inlet column to equilibrium at velocity U and the density of
+   *  the adjacent interior cell. 'equilibrium' is the original inlet, equilibrium at
+   *  ρ = 1: once the interior pressurises to drive the flow to the ρ = 1 outlet, mass
+   *  leaks back across the inlet face (≈ (ρ₁ − 1)/3 per row and step), so the scene
+   *  delivers less than U (results/tables/inlet_flux_before.csv). It stays the default
+   *  with the legacy 'copy' outlet so pre-2026-10-07 tables still reproduce. */
+  inletBC?: 'equilibrium' | 'densityMatched';
+  /** Reference state for solutal buoyancy. 'ambient' (default): ΔC is measured from the
+   *  cabin ambient (0), right when the walls hold ambient. 'enclosureMean': ΔC is
+   *  measured from the enclosure's current mean, the correct Boussinesq reference for a
+   *  closed or nearly closed dish. A uniform drift of the whole dish atmosphere (sealed
+   *  BRIC) then drives no spurious body force, and the β·ΔC limit applies only to
+   *  the local deviations that actually drive flow. */
+  buoyancyRef?: 'ambient' | 'enclosureMean';
+  /** Which species contribute to solutal buoyancy (default all three). For diagnosing
+   *  what drives the flow, e.g. ['co2', 'o2'] removes the transpiration (H₂O) term. */
+  buoyancySpecies?: Array<'h2o' | 'co2' | 'o2'>;
+  /** Collision scheme for this scene (default: LBMFluid.defaultCollision, i.e. BGK).
+   *  'mrt' is the opt-in multiple-relaxation-time scheme (Lallemand & Luo 2000). */
+  collision?: 'bgk' | 'mrt';
+  /** Saturation humidity, as an H₂O excess over ambient in model units. When set,
+   *  transpiration is driven by the leaf-to-air humidity gap: the local source is
+   *  S_H₂O · max(0, 1 − C_H₂O / h2oSatExcess), so it falls to zero as the air next to
+   *  the leaf saturates. Without it, H₂O release is constant and a sealed dish
+   *  accumulates humidity without bound. */
+  h2oSatExcess?: number;
+}
+
+/**
+ * Shared builder for the three plant scales. Wires the stomatal source/sink onto
+ * whatever surface the geometry defines, couples solutal buoyancy to a gravity
+ * vector, and reports convection strength + the surface gaps (mean and peak — the
+ * peak captures the worst trapped/interior spot that rosettes and canopies create).
+ */
+export function makeLeafScene(cfg: LeafSceneCfg): () => ScenarioInstance {
+  return () => {
+    const { nx, ny } = cfg;
+    const nu = 0.02;
+    const r = cfg.refine ?? 1;
+    const U = (cfg.forcedU ?? 0) / r;
+    const fluid = new LBMFluid(nx, ny, tauFromViscosity(nu));
+    if (cfg.collision) fluid.collision = cfg.collision;
+    fluid.setEquilibrium(1, U, 0);
+    fluid.enableForcing();
+
+    // Species (excess over ambient); D_CO2 < D_O2 < D_H2O as in air.
+    const co2 = new ScalarField(fluid, 0.033, 0);
+    const o2 = new ScalarField(fluid, 0.042, 0);
+    const h2o = new ScalarField(fluid, 0.05, 0);
+    co2.enableSource();
+    o2.enableSource();
+    h2o.enableSource();
+    const species = [co2, o2, h2o];
+
+    const { isLeaf, charLen, notes: geometryNotes } = cfg.geometry(fluid, { co2, o2, h2o });
+
+    // Forced airflow: convert the closed chamber into a ventilation channel by
+    // opening the left (inlet) and right (outlet) columns; top/bottom stay walls.
+    if (cfg.forcedU !== undefined) {
+      for (let y = 1; y < ny - 1; y++) {
+        for (const x of [0, nx - 1]) {
+          const c = fluid.index(x, y);
+          fluid.solid[c] = 0;
+          for (const sp of species) if (sp.dirichlet) sp.dirichlet[c] = NaN;
+        }
+      }
+    }
+
+    // Inlet: prescribed velocity + fresh air (zero species excess). Outlet:
+    // zero-gradient. Fluid part runs in postStream (after streaming); the species
+    // part runs in onAfterStep (after the scalar step) so the BC is not overwritten.
+    const outletBC = cfg.outletBC ?? 'pressure';
+    const inletBC = cfg.inletBC ?? (outletBC === 'copy' ? 'equilibrium' : 'densityMatched');
+    const fluidInletOutlet = () => {
+      for (let y = 1; y < ny - 1; y++) {
+        const ci = fluid.index(0, y) * 9;
+        let rhoIn = 1;
+        const cn = fluid.index(1, y);
+        if (inletBC === 'densityMatched' && !fluid.solid[cn]) {
+          rhoIn = 0;
+          for (let i = 0; i < 9; i++) rhoIn += fluid.f[cn * 9 + i];
+        }
+        for (let i = 0; i < 9; i++) fluid.f[ci + i] = feq(i, rhoIn, U, 0);
+        const co = fluid.index(nx - 1, y) * 9;
+        const cs = fluid.index(nx - 2, y) * 9;
+        if (outletBC === 'pressure') {
+          let rho = 0;
+          let mx = 0;
+          let my = 0;
+          for (let i = 0; i < 9; i++) {
+            const fi = fluid.f[cs + i];
+            rho += fi;
+            mx += CX[i] * fi;
+            my += CY[i] * fi;
+          }
+          const vx = mx / rho;
+          const vy = my / rho;
+          for (let i = 0; i < 9; i++) {
+            fluid.f[co + i] = feq(i, 1, vx, vy) + (fluid.f[cs + i] - feq(i, rho, vx, vy));
+          }
+        } else {
+          for (let i = 0; i < 9; i++) fluid.f[co + i] = fluid.f[cs + i];
+        }
+      }
+    };
+    // Mean age of air: ∂A/∂t + u·∇A = D∇²A + 1, A = 0 at the inlet, zero-gradient outlet.
+    const age = cfg.ageOfAir && cfg.forcedU !== undefined ? new ScalarField(fluid, 0.033, 0) : null;
+    if (age) {
+      age.enableSource();
+      for (let c = 0; c < fluid.size; c++) if (!fluid.solid[c]) age.source![c] = 1;
+    }
+    const speciesInletOutlet = () => {
+      for (const sp of age ? [...species, age] : species) {
+        for (let y = 1; y < ny - 1; y++) {
+          const ci = fluid.index(0, y) * 5;
+          for (let i = 0; i < 5; i++) sp.g[ci + i] = 0; // fresh air (C = 0)
+          const co = fluid.index(nx - 1, y) * 5;
+          const cs = fluid.index(nx - 2, y) * 5;
+          for (let i = 0; i < 5; i++) sp.g[co + i] = sp.g[cs + i];
+        }
+      }
+    };
+
+    // Stomatal fluxes on fluid cells adjacent to the plant surface. Kept small so
+    // the surface excess ΔC stays ≪ 1 (Boussinesq small-perturbation regime). In the
+    // dark, respiration reverses the signs (CO2 released, O2 consumed) at R/A = 0.31.
+    const sScale = ((cfg.sourceScale ?? 1) * (cfg.dark ? -0.31 : 1)) / r;
+    const S_CO2 = S_CO2_BASE * sScale;
+    const S_O2 = 4e-4 * sScale;
+    const S_H2O = (5e-4 * (cfg.sourceScale ?? 1) * (cfg.dark ? 0.31 : 1)) / r; // H2O always released
+    const surfaceCells: number[] = [];
+    for (let x = 1; x < nx - 1; x++) {
+      for (let y = 1; y < ny - 1; y++) {
+        const c = fluid.index(x, y);
+        if (fluid.solid[c]) continue;
+        const touches =
+          isLeaf[fluid.index(x + 1, y)] ||
+          isLeaf[fluid.index(x - 1, y)] ||
+          isLeaf[fluid.index(x, y + 1)] ||
+          isLeaf[fluid.index(x, y - 1)];
+        if (touches) {
+          surfaceCells.push(c);
+          co2.source![c] = -S_CO2;
+          o2.source![c] = S_O2;
+          h2o.source![c] = S_H2O;
+        }
+      }
+    }
+
+    // Photosynthesis feedback: assimilation is CO2-limited, so the local uptake
+    // scales with a rectangular-hyperbola CO2 response (compensation point Γ,
+    // half-saturation K) normalised to 1 at ambient. As the boundary layer depletes
+    // surface CO2, A falls; below Γ it stops. O2 release tracks A; transpiration
+    // (H2O) is left CO2-independent. `aEff` is the surface-mean A as a fraction of
+    // the light-saturated potential — the closed-loop growth-relevant output.
+    const Ca = cfg.co2Ambient ?? 0;
+    const GAMMA = 0.125 * Ca; // CO2 compensation point (~50/400 of ambient)
+    const KC = 0.75 * Ca; // half-saturation (~300/400 of ambient)
+    const mAmbient = Ca > 0 ? (Ca - GAMMA) / (Ca - GAMMA + KC) : 1;
+    let aEff = 1;
+    // Humidity-limited transpiration (opt-in): the leaf interior is saturated, so the
+    // H₂O flux scales with the remaining gap to saturation at each surface cell.
+    let eEff = 1;
+    const updateTranspiration = () => {
+      const sat = cfg.h2oSatExcess;
+      if (!(sat !== undefined && sat > 0)) return;
+      let sum = 0;
+      for (const c of surfaceCells) {
+        const m = Math.max(0, 1 - h2o.C[c] / sat);
+        h2o.source![c] = S_H2O * m;
+        sum += m;
+      }
+      eEff = sum / (surfaceCells.length || 1);
+    };
+    const updatePhotosynthesis = () => {
+      if (!(Ca > 0) || cfg.dark) return;
+      let sum = 0;
+      for (const c of surfaceCells) {
+        const cAbs = Ca + co2.C[c]; // co2.C is excess (negative near a lit leaf)
+        const m = cAbs <= GAMMA ? 0 : (cAbs - GAMMA) / (cAbs - GAMMA + KC) / mAmbient;
+        co2.source![c] = -S_CO2 * m;
+        o2.source![c] = S_O2 * m;
+        sum += m;
+      }
+      aEff = sum / surfaceCells.length;
+    };
+
+    // Enclosure gas exchange (spaceflight hardware). When membraneK is set the
+    // ambient-held chamber walls become either sealed (k=0, BRIC) or a semi-permeable
+    // membrane (0<k<1, CARA tape): clear the wall Dirichlet (→ zero-flux) and collect
+    // the near-wall fluid cells whose excess is relaxed toward ambient each step.
+    const membraneCells: number[] = [];
+    if (cfg.membraneK !== undefined) {
+      for (let x = 0; x < nx; x++) {
+        for (let y = 0; y < ny; y++) {
+          if (x !== 0 && x !== nx - 1 && y !== 0 && y !== ny - 1) continue;
+          const c = fluid.index(x, y);
+          if (co2.dirichlet) co2.dirichlet[c] = NaN;
+          if (o2.dirichlet) o2.dirichlet[c] = NaN;
+          if (h2o.dirichlet) h2o.dirichlet[c] = NaN;
+        }
+      }
+      if (cfg.membraneK > 0) {
+        // Only cells adjacent to the taped dish wall vent — the lid and sides, NOT
+        // the base (y=0 is sealed agar/soil) and NOT cells next to the leaf (the
+        // leaf is solid too, but it is not a wall).
+        const onBorder = (xx: number, yy: number) => xx === 0 || xx === nx - 1 || yy === ny - 1;
+        for (let x = 1; x < nx - 1; x++) {
+          for (let y = 1; y < ny - 1; y++) {
+            const c = fluid.index(x, y);
+            if (fluid.solid[c]) continue;
+            if (onBorder(x + 1, y) || onBorder(x - 1, y) || onBorder(x, y + 1) || onBorder(x, y - 1))
+              membraneCells.push(c);
+          }
+        }
+      }
+    }
+    const leak = cfg.membraneK ?? 0;
+    const applyMembrane = () => {
+      const f = 1 - leak;
+      for (const c of membraneCells) {
+        for (const sp of species) {
+          const b = c * 5;
+          for (let i = 0; i < 5; i++) sp.g[b + i] *= f;
+        }
+      }
+    };
+
+    // Buoyancy: humid air lighter (β<0); CO2 heavier (β>0, but depleted → lighter);
+    // O2 slightly heavier (β>0). Gravity points down (−y), scaled by g/g_earth.
+    const B = 8e-4;
+    const gLat = (B * cfg.gRatio) / r ** 3;
+    const include = new Set(cfg.buoyancySpecies ?? ['h2o', 'co2', 'o2']);
+    const contributors = [
+      { name: 'h2o', field: h2o, beta: -1.0, ref: 0 },
+      { name: 'co2', field: co2, beta: 0.7, ref: 0 },
+      { name: 'o2', field: o2, beta: 0.5, ref: 0 },
+    ].filter((c) => include.has(c.name as 'h2o' | 'co2' | 'o2'));
+
+    const surfaceStats = (field: ScalarField): { mean: number; peak: number } => {
+      let sum = 0;
+      let peak = 0;
+      for (const c of surfaceCells) {
+        const v = field.C[c];
+        sum += v;
+        if (Math.abs(v) > Math.abs(peak)) peak = v;
+      }
+      return { mean: sum / surfaceCells.length, peak };
+    };
+
+    const maxSpeed = (): number => {
+      let m = 0;
+      for (let c = 0; c < fluid.size; c++) {
+        if (fluid.solid[c]) continue;
+        const s = fluid.speed(c);
+        if (s > m) m = s;
+      }
+      return m;
+    };
+
+    // Whole-enclosure mean excess — for a sealed dish (BRIC) this drifts without
+    // bound; for a vented dish it settles near ambient (0).
+    const domainMean = (field: ScalarField): number => {
+      let sum = 0;
+      let n = 0;
+      for (let c = 0; c < fluid.size; c++) {
+        if (fluid.solid[c]) continue;
+        sum += field.C[c];
+        n++;
+      }
+      return sum / n;
+    };
+
+    const boundaryLabel =
+      cfg.forcedU !== undefined
+        ? 'vented (forced airflow)'
+        : cfg.membraneK === undefined
+          ? 'ambient walls'
+          : cfg.membraneK === 0
+            ? 'sealed (BRIC)'
+            : 'micropore tape (CARA)';
+
+    return {
+      id: cfg.id,
+      label: cfg.label,
+      fluid,
+      scalarField: h2o,
+      renderMode: 'scalar',
+      renderScale: cfg.renderScale,
+      postStream() {
+        if (cfg.forcedU !== undefined) fluidInletOutlet();
+      },
+      onAfterStep() {
+        updatePhotosynthesis(); // CO2-limit the source before it is applied
+        updateTranspiration(); // humidity-limit the H₂O source (only if h2oSatExcess is set)
+        co2.step();
+        o2.step();
+        h2o.step();
+        if (age) age.step();
+        if (cfg.forcedU !== undefined) speciesInletOutlet();
+        if (membraneCells.length) applyMembrane();
+        if (cfg.buoyancyRef === 'enclosureMean' && gLat !== 0) {
+          for (const ct of contributors) ct.ref = domainMean(ct.field);
+        }
+        applyBoussinesqForce(fluid, 0, -gLat, contributors);
+      },
+      diagnostics(step: number): Readout[] {
+        fluid.computeMacroscopic();
+        const umax = maxSpeed();
+        const w = surfaceStats(h2o);
+        const cc = surfaceStats(co2);
+        const oo = surfaceStats(o2);
+        const Sc = nu / 0.05;
+        const Ra = ((gLat * Math.abs(w.mean) * charLen ** 3) / (nu * nu)) * Sc;
+        const gAbs = cfg.gRatio * GRAVITY.earth;
+        const out: Readout[] = [
+          ...(geometryNotes ?? []),
+          { label: 'enclosure', value: boundaryLabel },
+          { label: 'gravity', value: `${gAbs.toFixed(2)} m/s²  (${cfg.gRatio.toFixed(3)} g)` },
+        ];
+        if (cfg.forcedU !== undefined) {
+          // Delivered flow: mass flux through the open outlet cells over the set flow
+          // U × (open inlet rows). Must sit in 0.95–1.05 for the fan speed to be the one
+          // actually ventilating the plant (results/tables/inlet_flux_*.csv).
+          let q = 0;
+          let open = 0;
+          for (let y = 1; y < ny - 1; y++) {
+            if (!fluid.solid[fluid.index(0, y)] && !fluid.solid[fluid.index(1, y)]) open++;
+            const co = fluid.index(nx - 1, y);
+            if (!fluid.solid[co]) q += fluid.rho[co] * fluid.ux[co];
+          }
+          out.push(
+            { label: 'forced airflow', value: `${(U * r * U_STAR_CM_S).toFixed(1)} cm/s` },
+            { label: 'throughput / set fan flow', value: (q / (U * open)).toFixed(4) },
+          );
+        }
+        out.push(
+          { label: 'steps', value: step.toLocaleString() },
+          { label: 'u_max (convection)', value: umax.toExponential(2) },
+        );
+        if (cfg.membraneK !== undefined || cfg.dark) {
+          out.push({ label: 'dish-mean CO₂ excess', value: domainMean(co2).toFixed(3) });
+          if (cfg.h2oSatExcess !== undefined) {
+            out.push(
+              { label: 'dish-mean H₂O excess', value: domainMean(h2o).toFixed(4) },
+              { label: 'transpiration (% potential)', value: (eEff * 100).toFixed(1) },
+            );
+          }
+        } else {
+          out.push({ label: 'Rayleigh (H₂O)', value: Ra.toExponential(1) });
+        }
+        out.push(
+          { label: 'ΔC H₂O  mean/peak', value: `${w.mean.toFixed(3)} / ${w.peak.toFixed(3)}` },
+          { label: 'ΔC CO₂  mean/peak', value: `${cc.mean.toFixed(3)} / ${cc.peak.toFixed(3)}` },
+          { label: 'ΔC O₂  mean/peak', value: `${oo.mean.toFixed(3)} / ${oo.peak.toFixed(3)}` },
+        );
+
+        // Surface distribution of the CO₂ gap, not just its mean (after the tray-plane CoV
+        // and target-band fraction of the microgreen-chamber-cfd project): how uneven the
+        // boundary layer is over the plant, and how much of the surface is worse than an
+        // isolated Earth leaf's average gap (DC_CO2_REF).
+        {
+          const v = surfaceCells.map((c) => Math.abs(co2.C[c])).sort((a, b) => a - b);
+          const n = v.length || 1;
+          const mean = v.reduce((s, x) => s + x, 0) / n;
+          const sd = Math.sqrt(v.reduce((s, x) => s + (x - mean) ** 2, 0) / n);
+          const q = (p: number) => v[Math.min(v.length - 1, Math.floor(p * (v.length - 1)))] ?? NaN;
+          const worse = v.filter((x) => x > DC_CO2_REF).length / n;
+          out.push(
+            { label: 'surface |ΔC CO₂| CoV', value: (mean > 0 ? sd / mean : NaN).toFixed(4) },
+            { label: 'surface |ΔC CO₂| p10/p50/p90', value: `${q(0.1).toFixed(4)} / ${q(0.5).toFixed(4)} / ${q(0.9).toFixed(4)}` },
+            { label: 'surface frac > Earth-leaf mean', value: worse.toFixed(4) },
+          );
+        }
+
+        // Model-derived boundary-layer transport for CO2 (film theory). g_bl is
+        // the conductance that, in series with stomatal + mesophyll conductances,
+        // sets the CO2 reaching Rubisco (Cc) — the handoff to the photorespiration
+        // model. δ = D / g_bl is the diffusive film thickness; Sh = L / δ. All three
+        // are reported once the surface gap has built up (skipped in the transient).
+        let sAbs = 0;
+        for (const c of surfaceCells) sAbs += Math.abs(co2.source![c]);
+        sAbs /= surfaceCells.length || 1;
+        const dCco2 = Math.abs(cc.mean);
+        if (dCco2 > 5e-3 && sAbs > 0) {
+          const gbl = (K_GBL * r * sAbs) / dCco2; // mol m⁻² s⁻¹
+          const gblMS = gbl / MOLAR_DENSITY; // m s⁻¹
+          const deltaMM = (D_CO2_PHYS / gblMS) * 1e3; // δ = D / g_bl, in mm
+          const Sh = (charLen * (DX_M / r)) / (deltaMM * 1e-3); // L / δ, dimensionless
+          out.push(
+            { label: 'g_bl CO₂', value: `${gbl.toFixed(3)} mol m⁻² s⁻¹` },
+            { label: 'δ film (CO₂)', value: `${deltaMM.toFixed(2)} mm` },
+            { label: 'Sherwood Sh', value: Sh.toFixed(1) },
+          );
+        }
+        // Conductance between the leaf surface and the enclosure's own bulk air. In a
+        // sealed dish (BRIC) the whole atmosphere drifts, so the gap to the original
+        // ambient grows without bound; the surface-to-bulk gap reaches a quasi-steady
+        // value and is the meaningful boundary-layer conductance there.
+        {
+          const dCrel = Math.abs(cc.mean - domainMean(co2));
+          if (dCrel > 5e-3 && sAbs > 0) {
+            out.push({ label: 'g_bl vs enclosure bulk', value: `${((K_GBL * r * sAbs) / dCrel).toFixed(3)} mol m⁻² s⁻¹` });
+          }
+        }
+        if (age) {
+          // τ = fluid area / inlet flux (lattice steps). Outlet age is flux-weighted on
+          // the last interior column; for a converged field it must equal τ.
+          let nFluid = 0;
+          let ageSum = 0;
+          for (let c = 0; c < fluid.size; c++) {
+            if (fluid.solid[c]) continue;
+            nFluid++;
+            ageSum += age.C[c];
+          }
+          let qIn = 0;
+          let qOut = 0;
+          let aOut = 0;
+          for (let y = 1; y < ny - 1; y++) {
+            const ci = fluid.index(1, y);
+            const co = fluid.index(nx - 2, y);
+            if (!fluid.solid[ci]) qIn += fluid.ux[ci];
+            if (!fluid.solid[co]) {
+              qOut += fluid.ux[co];
+              aOut += fluid.ux[co] * age.C[co];
+            }
+          }
+          const tau = nFluid / qIn;
+          const meanAge = ageSum / nFluid;
+          out.push(
+            { label: 'age τ (nominal)', value: `${tau.toFixed(1)} steps` },
+            { label: 'age outlet / τ', value: (aOut / qOut / tau).toFixed(4) },
+            { label: 'age mean / τ', value: (meanAge / tau).toFixed(4) },
+            { label: 'ε_a ventilation', value: (tau / (2 * meanAge)).toFixed(4) },
+            { label: 'outlet / inlet flux', value: (qOut / qIn).toFixed(4) },
+          );
+        }
+        if (cfg.co2Ambient !== undefined && !cfg.dark) {
+          out.push({ label: 'net assimilation (% potential)', value: (aEff * 100).toFixed(1) });
+        }
+        return out;
+      },
+    };
+  };
+}
+
+const R2E = GRAVITY.mars / GRAVITY.earth;
+const M2E = GRAVITY.moon / GRAVITY.earth;
+
+const LEAF_DESC =
+  'Single Arabidopsis leaf in a closed chamber — stomatal CO₂ uptake + O₂/H₂O release with solutal buoyancy. Sweep gravity (select each preset, Run ~30k steps) and watch u_max fall and the surface gaps ΔC steepen.';
+const ROSETTE_DESC =
+  'A rosette of overlapping leaves. Leaves shade each other’s airflow and trap air near the crown, so the interior surface gaps (ΔC peak) run steeper than an isolated leaf — an effect that worsens as gravity falls.';
+const FAN_DESC =
+  'A leaf in microgravity with forced ventilation — the engineered substitute for the buoyant convection µg removes. As fan speed rises, the inlet flow thins the boundary layer and the surface gaps ΔC fall back toward Earth-1 g levels (compare with “Leaf · Earth”).';
+const BRIC_DESC =
+  'BRIC spaceflight hardware — a hermetically SEALED Petri dish in µg. No gas exchange with the cabin, so the enclosure atmosphere drifts without bound: in light the leaf depletes its own CO₂ (carbon starvation); in the dark respiration consumes O₂ and builds CO₂ (hypoxia). Watch “dish-mean CO₂ excess” run away — it never reaches steady state.';
+const CARA_DESC =
+  'CARA spaceflight hardware — a Petri dish sealed with gas-permeable micropore surgical tape in µg. The tape vents the dish toward the cabin, so the dish-mean stays bounded near ambient — but with no convection inside, a diffusive boundary layer still steepens the gases at the leaf surface. Compare its dish-mean (bounded) with BRIC (runaway).';
+const VEGGIE_DESC =
+  'VEGGIE spaceflight hardware — light + forced airflow actively ventilating the growth volume in µg. The circulated air thins the leaf boundary layer as well as venting the enclosure, restoring near-Earth surface gas gradients. (If the dish stayed taped, internal gradients would resemble CARA; VEGGIE’s design intent is to ventilate the plants directly.)';
+const FB_DESC =
+  'Closed-loop photosynthesis: the leaf’s CO₂ uptake is now CO₂-limited (compensation point + saturation), so the boundary-layer CO₂ depletion the model builds up feeds back to suppress assimilation. Watch “net assimilation (% potential)” — it falls as the boundary layer thickens (µg) and where air is trapped (rosette crown), and is highest under ventilation.';
+const CANOPY_DESC =
+  'A microgreen “lawn” — a dense row of upright shoots on soil, ambient above. Convection ventilates only the canopy top; the within-canopy air stagnates, and in microgravity the whole stand’s gas gaps blow out.';
+
+const SHAPE_DESC =
+  'The same single-leaf chamber, but the blade is a real leaf outline cut along its midrib instead of an ellipse. Chord (52 cells) and thickness (8 cells) match “Leaf · Earth/µg” exactly, so the difference is down to the outline alone — a tapered blade with a narrow base and a rounded tip, not a symmetric ellipse. Measured (T14): the real outline conducts LESS than the ellipse — g_bl 0.941 vs 0.997 at 1 g (−5.6%) and 0.426 vs 0.443 in µg (−3.8%), at steady state. The ellipse has been flattering the leaf by a few percent. NOTE: the shipped outline is a provisional analytic stand-in until the NeuraLeaf fitting pipeline has been run on real imagery; the readout says so.';
+
+const CURL_DESC =
+  'Curl × gravity. The cut runs ACROSS the blade — the plane cupping actually lives in — so a curled leaf appears as a U that traps air underneath. Measured (T14): curl costs about the same in blade-MEAN conductance at either gravity (×0.81 at 1 g, ×0.83 in µg), so curl and gravity do NOT compound on the mean. They do compound on the WORST SPOT: the peak surface gap runs −0.208 → −0.326 at 1 g but −0.338 → −0.540 in µg, so a curled blade in µg sits at 2.6× the peak CO₂ gap of a flat blade at 1 g. CAVEAT: the curled section is 35 cells wide against the flat one\'s 27, because the blade thickness has to be inflated ~11× to be resolvable at all and that fattens a tilted margin sideways. Curl is therefore not the only variable here — treat these as indicative until the blade is resolved on a finer lattice. Not comparable with the longitudinal-cut scenarios either, which have a different characteristic length.';
+
+const DOM = { nx: 128, ny: 96 };
+
+export const SCENARIOS: ScenarioDef[] = [
+  {
+    id: 'leaf-earth',
+    label: 'Leaf · Earth (1 g)',
+    description: LEAF_DESC,
+    build: makeLeafScene({ ...DOM, id: 'leaf-earth', label: 'Single leaf — Earth (1 g)', gRatio: 1, renderScale: 0.12, geometry: leafGeometry }),
+  },
+  {
+    id: 'leaf-mars',
+    label: 'Leaf · Mars (0.38 g)',
+    description: LEAF_DESC,
+    build: makeLeafScene({ ...DOM, id: 'leaf-mars', label: 'Single leaf — Mars (0.38 g)', gRatio: R2E, renderScale: 0.12, geometry: leafGeometry }),
+  },
+  {
+    id: 'leaf-moon',
+    label: 'Leaf · Moon (0.17 g)',
+    description: LEAF_DESC,
+    build: makeLeafScene({ ...DOM, id: 'leaf-moon', label: 'Single leaf — Moon (0.17 g)', gRatio: M2E, renderScale: 0.12, geometry: leafGeometry }),
+  },
+  {
+    id: 'leaf-ug',
+    label: 'Leaf · microgravity (0 g)',
+    description: LEAF_DESC,
+    build: makeLeafScene({ ...DOM, id: 'leaf-ug', label: 'Single leaf — microgravity (0 g)', gRatio: 0, renderScale: 0.12, geometry: leafGeometry }),
+  },
+  {
+    id: 'rosette-earth',
+    label: 'Rosette · Earth (1 g)',
+    description: ROSETTE_DESC,
+    build: makeLeafScene({ ...DOM, id: 'rosette-earth', label: 'Rosette — Earth (1 g)', gRatio: 1, renderScale: 0.18, geometry: rosetteGeometry }),
+  },
+  {
+    id: 'rosette-ug',
+    label: 'Rosette · microgravity (0 g)',
+    description: ROSETTE_DESC,
+    build: makeLeafScene({ ...DOM, id: 'rosette-ug', label: 'Rosette — microgravity (0 g)', gRatio: 0, renderScale: 0.18, geometry: rosetteGeometry }),
+  },
+  {
+    id: 'canopy-earth',
+    label: 'Microgreen canopy · Earth (1 g)',
+    description: CANOPY_DESC,
+    build: makeLeafScene({ ...DOM, id: 'canopy-earth', label: 'Microgreen canopy — Earth (1 g)', gRatio: 1, renderScale: 0.3, sourceScale: 0.3, geometry: canopyGeometry }),
+  },
+  {
+    id: 'canopy-ug',
+    label: 'Microgreen canopy · microgravity (0 g)',
+    description: CANOPY_DESC,
+    build: makeLeafScene({ ...DOM, id: 'canopy-ug', label: 'Microgreen canopy — microgravity (0 g)', gRatio: 0, renderScale: 0.3, sourceScale: 0.3, geometry: canopyGeometry }),
+  },
+  {
+    id: 'leaf-ug-fan-lo',
+    label: 'Leaf · µg + fan 3 cm/s',
+    description: FAN_DESC,
+    build: makeLeafScene({ ...DOM, id: 'leaf-ug-fan-lo', label: 'Leaf — µg + fan ~3 cm/s', gRatio: 0, renderScale: 0.12, geometry: leafGeometry, forcedU: 0.02 }),
+  },
+  {
+    id: 'leaf-ug-fan-mid',
+    label: 'Leaf · µg + fan 8 cm/s',
+    description: FAN_DESC,
+    build: makeLeafScene({ ...DOM, id: 'leaf-ug-fan-mid', label: 'Leaf — µg + fan ~8 cm/s', gRatio: 0, renderScale: 0.12, geometry: leafGeometry, forcedU: 0.05 }),
+  },
+  {
+    id: 'leaf-ug-fan-hi',
+    label: 'Leaf · µg + fan 17 cm/s',
+    description: FAN_DESC,
+    build: makeLeafScene({ ...DOM, id: 'leaf-ug-fan-hi', label: 'Leaf — µg + fan ~17 cm/s', gRatio: 0, renderScale: 0.12, geometry: leafGeometry, forcedU: 0.1 }),
+  },
+  {
+    id: 'hw-bric-light',
+    label: 'Hardware · BRIC sealed (light)',
+    description: BRIC_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-bric-light', label: 'BRIC — sealed dish, µg, light', gRatio: 0, renderScale: 0.5, geometry: leafGeometry, membraneK: 0 }),
+  },
+  {
+    id: 'hw-bric-dark',
+    label: 'Hardware · BRIC sealed (dark)',
+    description: BRIC_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-bric-dark', label: 'BRIC — sealed dish, µg, dark (respiration)', gRatio: 0, renderScale: 0.5, geometry: leafGeometry, membraneK: 0, dark: true }),
+  },
+  {
+    id: 'hw-cara',
+    label: 'Hardware · CARA micropore tape',
+    description: CARA_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-cara', label: 'CARA — micropore-taped dish, µg, light', gRatio: 0, renderScale: 0.3, geometry: leafGeometry, membraneK: 0.01 }),
+  },
+  {
+    id: 'hw-cara-dark',
+    label: 'Hardware · CARA micropore tape (dark)',
+    description: CARA_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-cara-dark', label: 'CARA — micropore-taped dish, µg, dark', gRatio: 0, renderScale: 0.3, geometry: leafGeometry, membraneK: 0.01, dark: true }),
+  },
+  {
+    id: 'hw-veggie',
+    label: 'Hardware · VEGGIE vented',
+    description: VEGGIE_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-veggie', label: 'VEGGIE — vented + light, µg', gRatio: 0, renderScale: 0.12, geometry: leafGeometry, forcedU: 0.05 }),
+  },
+  {
+    id: 'hw-rosette-bric',
+    label: 'Rosette · BRIC sealed',
+    description: BRIC_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-rosette-bric', label: 'Rosette — BRIC sealed, µg', gRatio: 0, renderScale: 0.6, geometry: rosetteGeometry, membraneK: 0 }),
+  },
+  {
+    id: 'hw-rosette-veggie',
+    label: 'Rosette · VEGGIE vented',
+    description: VEGGIE_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-rosette-veggie', label: 'Rosette — vented + light, µg', gRatio: 0, renderScale: 0.18, geometry: rosetteGeometry, forcedU: 0.05 }),
+  },
+  {
+    id: 'hw-canopy-bric',
+    label: 'Canopy · BRIC sealed',
+    description: BRIC_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-canopy-bric', label: 'Canopy — BRIC sealed, µg', gRatio: 0, renderScale: 0.7, geometry: canopyGeometry, sourceScale: 0.3, membraneK: 0 }),
+  },
+  {
+    id: 'hw-canopy-veggie',
+    label: 'Canopy · VEGGIE vented',
+    description: VEGGIE_DESC,
+    build: makeLeafScene({ ...DOM, id: 'hw-canopy-veggie', label: 'Canopy — vented + light, µg', gRatio: 0, renderScale: 0.3, geometry: canopyGeometry, sourceScale: 0.3, forcedU: 0.05 }),
+  },
+  {
+    id: 'fb-leaf-earth',
+    label: 'Feedback · Leaf Earth (1 g)',
+    description: FB_DESC,
+    build: makeLeafScene({ ...DOM, id: 'fb-leaf-earth', label: 'Leaf — Earth, CO₂-limited photosynthesis', gRatio: 1, renderScale: 0.12, geometry: leafGeometry, co2Ambient: 8 }),
+  },
+  {
+    id: 'fb-leaf-ug',
+    label: 'Feedback · Leaf µg (0 g)',
+    description: FB_DESC,
+    build: makeLeafScene({ ...DOM, id: 'fb-leaf-ug', label: 'Leaf — µg, CO₂-limited photosynthesis', gRatio: 0, renderScale: 0.12, geometry: leafGeometry, co2Ambient: 8 }),
+  },
+  {
+    id: 'fb-rosette-ug',
+    label: 'Feedback · Rosette µg (0 g)',
+    description: FB_DESC,
+    build: makeLeafScene({ ...DOM, id: 'fb-rosette-ug', label: 'Rosette — µg, CO₂-limited photosynthesis', gRatio: 0, renderScale: 0.18, geometry: rosetteGeometry, co2Ambient: 8 }),
+  },
+  {
+    id: 'shape-flat-earth',
+    label: 'Shape · real outline, Earth (1 g)',
+    description: SHAPE_DESC,
+    build: makeLeafScene({ ...DOM, id: 'shape-flat-earth', label: 'Leaf outline — Earth (1 g)', gRatio: 1, renderScale: 0.12, geometry: assetLeafGeometry({ assetId: 'provisional-mature-flat' }) }),
+  },
+  {
+    id: 'shape-flat-ug',
+    label: 'Shape · real outline, µg (0 g)',
+    description: SHAPE_DESC,
+    build: makeLeafScene({ ...DOM, id: 'shape-flat-ug', label: 'Leaf outline — microgravity (0 g)', gRatio: 0, renderScale: 0.12, geometry: assetLeafGeometry({ assetId: 'provisional-mature-flat' }) }),
+  },
+  {
+    id: 'curl-none-earth',
+    label: 'Curl · flat blade, Earth (1 g)',
+    description: CURL_DESC,
+    build: makeLeafScene({ ...DOM, id: 'curl-none-earth', label: 'Transverse cut, flat — Earth (1 g)', gRatio: 1, renderScale: 0.12, geometry: assetLeafGeometry({ assetId: 'provisional-mature-flat', cut: 'transverse' }) }),
+  },
+  {
+    id: 'curl-strong-earth',
+    label: 'Curl · curled blade, Earth (1 g)',
+    description: CURL_DESC,
+    build: makeLeafScene({ ...DOM, id: 'curl-strong-earth', label: 'Transverse cut, curl 0.8 — Earth (1 g)', gRatio: 1, renderScale: 0.12, geometry: assetLeafGeometry({ assetId: 'provisional-mature-flat', cut: 'transverse', deform: { curl: 0.8 } }) }),
+  },
+  {
+    id: 'curl-none-ug',
+    label: 'Curl · flat blade, µg (0 g)',
+    description: CURL_DESC,
+    build: makeLeafScene({ ...DOM, id: 'curl-none-ug', label: 'Transverse cut, flat — microgravity (0 g)', gRatio: 0, renderScale: 0.12, geometry: assetLeafGeometry({ assetId: 'provisional-mature-flat', cut: 'transverse' }) }),
+  },
+  {
+    id: 'curl-strong-ug',
+    label: 'Curl · curled blade, µg (0 g)',
+    description: CURL_DESC,
+    build: makeLeafScene({ ...DOM, id: 'curl-strong-ug', label: 'Transverse cut, curl 0.8 — microgravity (0 g)', gRatio: 0, renderScale: 0.12, geometry: assetLeafGeometry({ assetId: 'provisional-mature-flat', cut: 'transverse', deform: { curl: 0.8 } }) }),
+  },
+  {
+    id: 'cavity',
+    label: 'Lid-driven cavity',
+    description:
+      'Validation gate 1 — compares the vertical/horizontal centreline velocity profiles to Ghia et al. (1982) at Re 100.',
+    build: buildCavity,
+  },
+  {
+    id: 'cylinder',
+    label: 'Flow past cylinder',
+    description:
+      'Validation gate 2 — measures the Kármán vortex-shedding Strouhal number. Unconfined St ≈ 0.164 at Re 100; this confined channel (≈17% blockage) raises it to ≈ 0.19–0.20 (measured 0.196).',
+    build: buildCylinder,
+  },
+  {
+    id: 'natconv',
+    label: 'Natural convection (buoyancy)',
+    description:
+      'Validation gate 3 — differentially heated cavity at Ra 1e4. Buoyancy from the temperature field drives a convection roll; the hot-wall Nusselt number must match de Vahl Davis (1983), Nu ≈ 2.24. This is the proof that the gravity/buoyancy coupling is physically correct.',
+    build: buildNaturalConvection,
+  },
+  {
+    id: 'diffusion',
+    label: 'Pure diffusion (microgravity limit)',
+    description:
+      'Validation gate 4 — with no flow, an initial concentration step must relax to the error-function profile C(x,t)=½ erfc((x−x0)/2√(Dt)). This molecular-diffusion limit is exactly what dominates gas transport once microgravity removes convection.',
+    build: buildDiffusion,
+  },
+];

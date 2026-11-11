@@ -1,0 +1,41 @@
+{
+  "name": "spaceflight-plant-biophysics-multiomics",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Coupled 2D lattice-Boltzmann CFD, Farquhar–von Caemmerer–Berry (FvCB) C3 model, and NASA OSDR multi-omics analysis of spaceflight plant gas exchange and enclosure carbon starvation.",
+  "author": "Richard J. Barker <dr.richard.barker@gmail.com> (https://orcid.org/0000-0001-5681-9857)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics.git"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "gates": "tsx validation/gates.ts",
+    "mrt-check": "tsx validation/mrt_check.ts",
+    "sweep": "tsx validation/sweep.ts",
+    "stationarity": "tsx validation/stationarity_check.ts",
+    "resolution": "tsx validation/resolution_ladder.ts",
+    "shape": "tsx validation/shape_sweep.ts",
+    "domain-size": "tsx validation/domain_size.ts",
+    "dish-hw": "tsx validation/dish_hardware.ts",
+    "dish-fb": "tsx validation/dish_feedback.ts",
+    "verify-omics": "python3 scripts/fvcb.py && python3 scripts/check_js_parity.py && python3 scripts/check_site_data.py && python3 scripts/make_manifest.py"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.0"
+  }
+}

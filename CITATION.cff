@@ -1,0 +1,76 @@
+cff-version: 1.2.0
+title: "From microgravity boundary-layer biophysics to the spaceflight multi-ome: a coupled lattice-Boltzmann and Farquhar–von Caemmerer–Berry model of Arabidopsis gas exchange and enclosure carbon starvation"
+message: "If you use this software, model, or derived dataset, please cite it using the metadata from this file."
+type: software
+license: MIT
+version: 1.0.0
+date-released: "2026-11-11"
+repository-code: "https://github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics"
+url: "https://dr-richard-barker.github.io/Spaceflight-Plant-Biophysics-Multiomics/"
+authors:
+  - family-names: "Barker"
+    given-names: "Richard J."
+    email: "dr.richard.barker@gmail.com"
+    affiliation: "Purdue University, West Lafayette, IN, USA"
+    orcid: "https://orcid.org/0000-0001-5681-9857"
+keywords:
+  - microgravity
+  - spaceflight
+  - Arabidopsis thaliana
+  - boundary-layer conductance
+  - computational fluid dynamics
+  - lattice-Boltzmann
+  - Farquhar-von Caemmerer-Berry
+  - photorespiration
+  - Rubisco
+  - carbon starvation
+  - multi-omics
+  - NASA OSDR
+  - BRIC-LED
+  - CARA
+  - VEGGIE
+references:
+  - type: article
+    title: "Biochemical models of photosynthetic CO2 assimilation by leaves of C3 species"
+    authors:
+      - family-names: "Farquhar"
+        given-names: "G. D."
+      - family-names: "von Caemmerer"
+        given-names: "S."
+      - family-names: "Berry"
+        given-names: "J. A."
+    journal: "Planta"
+    volume: 149
+    pages: "78-90"
+    year: 1980
+    doi: "10.1007/BF00386231"
+  - type: article
+    title: "Meta-analysis of the space flight and microgravity response of the Arabidopsis plant transcriptome"
+    authors:
+      - family-names: "Barker"
+        given-names: "Richard"
+      - family-names: "Kruse"
+        given-names: "CPS"
+      - family-names: "Johnson"
+        given-names: "C"
+      - family-names: "Saravia-Butler"
+        given-names: "A"
+      - family-names: "Fogle"
+        given-names: "H"
+      - family-names: "Chang"
+        given-names: "H-S"
+      - family-names: "Trane"
+        given-names: "RM"
+      - family-names: "Kinscherf"
+        given-names: "N"
+      - family-names: "Villani"
+        given-names: "M"
+      - family-names: "Masson"
+        given-names: "PH"
+      - family-names: "Gilroy"
+        given-names: "S"
+    journal: "npj Microgravity"
+    volume: 9
+    pages: "21"
+    year: 2023
+    doi: "10.1038/s41526-023-00247-6"

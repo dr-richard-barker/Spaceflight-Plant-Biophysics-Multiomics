@@ -1,0 +1,1 @@
+{"id":"hw-rosette-veggie","scale":"rosette","gravity":0,"hardware":"VEGGIE","steps":150000,"meanAbs":0.289,"peakAbs":0.91,"cov":0.6567,"p10":0.1106,"p50":0.2154,"p90":0.6078,"fracWorse":0.68,"drift":0}

@@ -1,0 +1,7 @@
+pathway_id	pathway_name	pathway_size_universe	DE_count	fisher_odds_ratio	fisher_pvalue	median_lfc	median_shift	mwu_pvalue	direction
+ath00195	Photosynthesis	45	9	2.681	0.012698618959437332	-0.2449	-0.2677	2.1720005154570004e-10	down
+ath00196	Photosynthesis - antenna proteins	21	1	0.534	0.847244156800102	-0.1249	-0.1474	0.0019615012263108256	down
+ath00710	Carbon fixation in photosynthetic organisms	66	3	0.508	0.9293855272768587	-0.082	-0.1049	0.00013200967844914259	down
+ath00500	Starch and sucrose metabolism	142	19	1.658	0.033894481013987704	-0.1418	-0.1646	3.5099039419711862e-06	down
+ath00630	Glyoxylate and dicarboxylate metabolism	76	5	0.752	0.7894134968472908	-0.102	-0.1248	0.0003150109981046278	down
+ath04141	Protein processing in endoplasmic reticulum	203	40	2.66	4.862379309917723e-07	-0.0204	-0.0431	0.10775564512058712	down

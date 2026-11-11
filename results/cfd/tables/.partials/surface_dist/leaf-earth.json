@@ -1,0 +1,1 @@
+{"id":"leaf-earth","scale":"leaf","gravity":1,"hardware":"open","steps":150000,"meanAbs":0.161,"peakAbs":0.247,"cov":0.2316,"p10":0.1213,"p50":0.1558,"p90":0.2236,"fracWorse":0.3056,"drift":0}

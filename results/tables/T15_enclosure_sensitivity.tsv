@@ -1,0 +1,44 @@
+hardware_class	headspace_mL	leaf_area_cm2	irradiance_PAR	tape_permeance_mol_m2_s	ambient_CO2_ppm	time_to_comp_min	carbon_gain_12h_pct_earth
+sealed (BRIC)	15.0	1.0	60.0	0.0	400.0	62.9	2.93
+sealed (BRIC)	15.0	1.0	1000.0	0.0	400.0	29.2	1.33
+sealed (BRIC)	15.0	3.0	60.0	0.0	400.0	20.9	0.98
+sealed (BRIC)	15.0	3.0	1000.0	0.0	400.0	9.7	0.44
+sealed (BRIC)	15.0	6.0	60.0	0.0	400.0	10.4	0.49
+sealed (BRIC)	15.0	6.0	1000.0	0.0	400.0	4.8	0.22
+sealed (BRIC)	15.0	10.0	60.0	0.0	400.0	6.2	0.29
+sealed (BRIC)	15.0	10.0	1000.0	0.0	400.0	2.8	0.13
+sealed (BRIC)	30.0	1.0	60.0	0.0	400.0	125.9	5.86
+sealed (BRIC)	30.0	1.0	1000.0	0.0	400.0	58.5	2.65
+sealed (BRIC)	30.0	3.0	60.0	0.0	400.0	41.9	1.95
+sealed (BRIC)	30.0	3.0	1000.0	0.0	400.0	19.4	0.88
+sealed (BRIC)	30.0	6.0	60.0	0.0	400.0	20.9	0.98
+sealed (BRIC)	30.0	6.0	1000.0	0.0	400.0	9.7	0.44
+sealed (BRIC)	30.0	10.0	60.0	0.0	400.0	12.5	0.59
+sealed (BRIC)	30.0	10.0	1000.0	0.0	400.0	5.8	0.27
+sealed (BRIC)	60.0	1.0	60.0	0.0	400.0	252.0	11.72
+sealed (BRIC)	60.0	1.0	1000.0	0.0	400.0	117.1	5.3
+sealed (BRIC)	60.0	3.0	60.0	0.0	400.0	83.9	3.91
+sealed (BRIC)	60.0	3.0	1000.0	0.0	400.0	39.0	1.77
+sealed (BRIC)	60.0	6.0	60.0	0.0	400.0	41.9	1.95
+sealed (BRIC)	60.0	6.0	1000.0	0.0	400.0	19.4	0.88
+sealed (BRIC)	60.0	10.0	60.0	0.0	400.0	25.1	1.17
+sealed (BRIC)	60.0	10.0	1000.0	0.0	400.0	11.6	0.53
+tape (CARA)	30.0	3.0	60.0	0.001	400.0	bounded	75.95
+tape (CARA)	30.0	3.0	1000.0	0.001	400.0	bounded	54.33
+tape (CARA)	30.0	3.0	60.0	0.003	400.0	bounded	91.36
+tape (CARA)	30.0	3.0	1000.0	0.003	400.0	bounded	81.07
+tape (CARA)	30.0	3.0	60.0	0.006	400.0	bounded	95.46
+tape (CARA)	30.0	3.0	1000.0	0.006	400.0	bounded	89.88
+tape (CARA)	30.0	3.0	60.0	0.012	400.0	bounded	97.52
+tape (CARA)	30.0	3.0	1000.0	0.012	400.0	bounded	94.46
+tape (CARA)	30.0	3.0	60.0	0.02	400.0	bounded	98.35
+tape (CARA)	30.0	3.0	1000.0	0.02	400.0	bounded	96.3
+sealed (ambient sweep)	30.0	3.0	60.0	0.0	400.0	41.9	1.95
+tape (ambient sweep)	30.0	3.0	60.0	0.006	400.0	bounded	95.46
+vented (ambient sweep)	30.0	3.0	60.0	0.0	400.0	bounded	99.58
+sealed (ambient sweep)	30.0	3.0	60.0	0.0	800.0	73.3	4.17
+tape (ambient sweep)	30.0	3.0	60.0	0.006	800.0	bounded	98.67
+vented (ambient sweep)	30.0	3.0	60.0	0.0	800.0	bounded	99.88
+sealed (ambient sweep)	30.0	3.0	60.0	0.0	1200.0	98.1	6.4
+tape (ambient sweep)	30.0	3.0	60.0	0.006	1200.0	bounded	99.37
+vented (ambient sweep)	30.0	3.0	60.0	0.0	1200.0	bounded	99.94

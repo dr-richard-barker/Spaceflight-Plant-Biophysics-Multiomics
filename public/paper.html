@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spaceflight Plant Biophysics &amp; Multi-Omics — Coupled LBM CFD, FvCB &amp; NASA OSDR Analysis</title>
+  <meta name="description" content="From microgravity boundary-layer biophysics to the spaceflight multi-ome: a coupled lattice-Boltzmann CFD and Farquhar–von Caemmerer–Berry model of Arabidopsis gas exchange and enclosure carbon starvation across NASA OSDR." />
+  <link rel="icon" href="cose/cose-logo.png" />
+  <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-chrome.css" />
+  <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-map.css" />
+  <style>
+    :root{ --bg:#ffffff; --fg:#1a2230; --muted:#5a6473; --line:#e5e9f0;
+      --card:#f7f9fc; --accent:#3B6EA5; --accent2:#3FB6A8; --rail:288px }
+    @media (prefers-color-scheme:dark){ :root{ --bg:#0f141b; --fg:#e6ebf2; --muted:#9aa6b6;
+      --line:#2b3543; --card:#161d27; --accent:#6ea3d8; --accent2:#54c9ba } }
+    html[data-theme="light"]{ --bg:#ffffff; --fg:#1a2230; --muted:#5a6473; --line:#e5e9f0;
+      --card:#f7f9fc; --accent:#3B6EA5; --accent2:#3FB6A8; color-scheme:light }
+    html[data-theme="dark"]{ --bg:#0f141b; --fg:#e6ebf2; --muted:#9aa6b6; --line:#2b3543;
+      --card:#161d27; --accent:#6ea3d8; --accent2:#54c9ba; color-scheme:dark }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{background:var(--bg);color:var(--fg);
+      font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased}
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .wrap{max-width:940px;margin:0 auto;padding:3.4rem 1.25rem 4rem}
+    .hero{padding:1.2rem 0 1.6rem;border-bottom:1px solid var(--line);margin-bottom:1.4rem}
+    .kicker{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);font-weight:700}
+    h1{font-size:2rem;line-height:1.22;margin:.4rem 0 .5rem;letter-spacing:-.01em}
+    .author-line{font-size:.94rem;color:var(--muted);margin:.3rem 0 .8rem}
+    .lede{font-size:1.08rem;color:var(--muted);margin:.2rem 0 1rem;max-width:48em}
+    .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.6rem 0 1rem}
+    .chip{font-size:.78rem;padding:.28rem .6rem;border:1px solid var(--line);border-radius:999px;color:var(--muted);background:var(--card)}
+    .cta{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.6rem}
+    .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.62rem 1rem;border-radius:9px;
+      font-weight:600;font-size:.92rem;border:1px solid transparent;cursor:pointer}
+    .btn.primary{background:var(--accent);color:#fff}
+    .btn.primary:hover{filter:brightness(1.06);text-decoration:none}
+    .btn.secondary{background:var(--accent2);color:#0f141b}
+    .btn.secondary:hover{filter:brightness(1.06);text-decoration:none}
+    .btn.ghost{background:var(--card);border-color:var(--line);color:var(--fg)}
+    .btn.ghost:hover{filter:brightness(.98);text-decoration:none}
+    main section{margin:2.4rem 0}
+    h2{font-size:1.34rem;margin:0 0 .6rem;letter-spacing:-.01em;scroll-margin-top:4rem}
+    h2 .n{display:inline-block;min-width:1.8em;color:var(--accent);font-variant-numeric:tabular-nums;font-weight:700}
+    h3{font-size:1.04rem;margin:1.2rem 0 .3rem;color:var(--fg)}
+    p{margin:.55rem 0}
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:.8rem;margin:1rem 0}
+    .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem}
+    .stat b{display:block;font-size:1.45rem;line-height:1.15;color:var(--accent);letter-spacing:-.01em}
+    .stat span{display:block;font-size:.85rem;color:var(--muted);margin-top:.25rem}
+    figure{margin:1.2rem 0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.8rem;overflow:hidden}
+    figure img{display:block;width:100%;height:auto;border-radius:6px;background:#ffffff}
+    figure img.dark-bg{background:#0b0d17}
+    figcaption{font-size:.85rem;color:var(--muted);margin-top:.6rem;line-height:1.5}
+    figcaption b{color:var(--fg)}
+    table{width:100%;border-collapse:collapse;font-size:.88rem;margin:.8rem 0}
+    th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid var(--line)}
+    th{color:var(--accent);font-size:.76rem;text-transform:uppercase;letter-spacing:.04em}
+    td.ok{color:var(--accent2);font-weight:700}
+    .cite{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);
+      border-radius:8px;padding:.8rem 1rem;font-size:.86rem;color:var(--muted);margin:.8rem 0}
+    .cite code{color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85em}
+    .links{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:.7rem;margin:1rem 0}
+    .lk{display:block;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.8rem .9rem}
+    .lk:hover{filter:brightness(.98);text-decoration:none}
+    .lk b{display:block;color:var(--fg)}
+    .lk span{font-size:.84rem;color:var(--muted)}
+    footer.site{border-top:1px solid var(--line);margin-top:2.5rem;padding-top:1.2rem;color:var(--muted);font-size:.88rem}
+    .note{font-size:.84rem;color:var(--muted);font-style:italic}
+  </style>
+</head>
+<body data-site-id="Spaceflight-Plant-Biophysics-Multiomics" data-brand-logo="cose/cose-logo.png" data-brand-url="https://cosecloud.com/">
+
+  <div class="wrap">
+    <header class="hero">
+      <div class="kicker">Progress in Biophysics &amp; Molecular Biology · Special Issue: Biophysics &amp; Molecular Biology for Space Flight</div>
+      <h1>From microgravity boundary-layer biophysics to the spaceflight multi-ome: a coupled lattice-Boltzmann and Farquhar–von Caemmerer–Berry model of <em>Arabidopsis</em> gas exchange and enclosure carbon starvation</h1>
+      <div class="author-line">
+        <strong>Richard J. Barker</strong> · Purdue University, West Lafayette, IN, USA ·
+        <a href="https://orcid.org/0000-0001-5681-9857" target="_blank" rel="noopener">ORCID 0000-0001-5681-9857</a> ·
+        <a href="mailto:dr.richard.barker@gmail.com">dr.richard.barker@gmail.com</a>
+      </div>
+      <p class="lede">An end-to-end physical and multi-omics framework uniting a validated 2-D lattice-Boltzmann CFD solver
+        (<code>LunarLeaf-CFD</code>), a mechanistic Farquhar–von Caemmerer–Berry (FvCB) C<sub>3</sub> biochemical model, a
+        21-compound flux-propagated metabolite scaffold, and empirical falsification across NASA OSDR spaceflight
+        transcriptomes and proteomes (OSD-522, OSD-38, OSD-321, OSD-678, OSD-427).</p>
+      <div class="chips">
+        <span class="chip">D2Q9/D2Q5 Lattice-Boltzmann CFD</span>
+        <span class="chip">4 Numerical Validation Gates</span>
+        <span class="chip">FvCB Rubisco C<sub>3</sub> Coupling</span>
+        <span class="chip">BRIC · CARA · VEGGIE</span>
+        <span class="chip">OSD-522 RNA-seq + Proteomics</span>
+        <span class="chip">6-Study OSDR Hardware Ladder</span>
+        <span class="chip">FAIR / Zenodo Ready</span>
+      </div>
+      <div class="cta">
+        <a class="btn primary" href="./">▶ Live 2-D LBM CFD Workbench</a>
+        <a class="btn secondary" href="./explorer/">🔬 Interactive FvCB &amp; Multi-Omics Explorer</a>
+        <a class="btn ghost" href="Spaceflight_Biophysics_Multiomics_Manuscript.pdf">📄 Manuscript (PDF)</a>
+        <a class="btn ghost" href="Spaceflight_Biophysics_Multiomics_SI.pdf">📑 Supplementary (PDF)</a>
+        <a class="btn ghost" href="Spaceflight_Biophysics_Multiomics_Manuscript.docx">📝 Manuscript (Word)</a>
+        <a class="btn ghost" href="https://github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics" target="_blank" rel="noopener">GitHub Repo</a>
+      </div>
+    </header>
+
+    <main>
+      <section id="abstract">
+        <h2><span class="n">01</span>Overview &amp; Central Thesis</h2>
+        <p>Two distinct gas-transport mechanisms have been proposed to explain spaceflight plant stress signatures:
+          (1) the microgravity loss of buoyancy-driven natural convection, which thickens the sub-millimetre diffusive
+          boundary layer around leaves (<em>C<sub>a</sub> → C<sub>s</sub></em>), and (2) atmospheric drawdown inside sealed
+          or poorly ventilated growth hardware (<em>C<sub>cabin</sub> → C<sub>a</sub></em>). Because no flight experiment has
+          resolved sub-millimetre leaf boundary layers or logged in-canister CO<sub>2</sub> across hardware classes, we
+          coupled a validated 2-D lattice-Boltzmann CFD solver to an FvCB C<sub>3</sub> model and tested its directional
+          predictions against NASA Open Science Data Repository (OSDR) multi-omics datasets.</p>
+        <p>We show that while microgravity genuinely reduces boundary-layer conductance <em>g<sub>bl</sub></em> by
+          <strong>2.0–2.3×</strong> across leaf, rosette, and canopy geometries, an illuminated sealed BRIC canister
+          exhausts its headspace CO<sub>2</sub> to the compensation point within <strong>~7 minutes</strong>, slashing
+          12-h carbon gain to <strong>~1%</strong> of an unenclosed control and raising Rubisco oxygenation
+          (<em>φ = V<sub>o</sub>/(V<sub>o</sub>+V<sub>c</sub>)</em>) from <strong>18.0% to 46.2%</strong>—an enclosure effect
+          <strong>22× larger</strong> than the microgravity boundary-layer effect that occurs equally in flight and ground
+          controls and causes the 1<em>g</em> and µ<em>g</em> boundary layers to converge as net assimilation approaches zero.</p>
+      </section>
+
+      <section id="findings">
+        <h2><span class="n">02</span>Key Quantitative Findings</h2>
+        <div class="stats">
+          <div class="stat"><b>2.0–2.3× lower <em>g<sub>bl</sub></em></b><span>Steady-state boundary-layer conductance drops from 0.997→0.443 (leaf), 0.540→0.272 (rosette), and 0.133→0.058 mol m⁻² s⁻¹ (canopy) from 1<em>g</em> to µ<em>g</em>.</span></div>
+          <div class="stat"><b>2.0 → 6.1 cm/s</b><span>Forced airflow required in µ<em>g</em> to restore 1<em>g</em> transport for a single leaf (2.0 cm/s) vs an overlapping rosette (6.1 cm/s).</span></div>
+          <div class="stat"><b>~7 min / 1% vs 90% vs 100%</b><span>Sealed BRIC CO<sub>2</sub> exhaustion time in light, and 12-h carbon gain across BRIC (1%), taped CARA (90%), and ventilated VEGGIE (100%).</span></div>
+          <div class="stat"><b>18.0% → 46.2% (22×)</b><span>Rubisco oxygenation jump from canister drawdown at 60 µmol m⁻² s⁻¹—22× larger than the residual µ<em>g</em> boundary-layer shift.</span></div>
+          <div class="stat"><b>0 of 12 in OSDR</b><span>Plant studies among all 12 metabolomics datasets across 567 NASA OSDR accessions, motivating our 21-compound hypothesis scaffold.</span></div>
+          <div class="stat"><b>8/9 RNA · 6/6 Light</b><span>Directional gene-set calls matched in OSD-522 shoot RNA-seq, and complete separation of lit vs dark studies across 6 OSDR contrasts (<em>p</em> = 0.05).</span></div>
+        </div>
+      </section>
+
+      <section id="validation">
+        <h2><span class="n">03</span>Part I — Lattice-Boltzmann Solver Verification &amp; Empirical Gas-Exchange Anchor</h2>
+        <p>Before simulating biological geometries, the D2Q9 incompressible-flow and three-species (CO<sub>2</sub>/O<sub>2</sub>/H<sub>2</sub>O)
+          D2Q5 advection–diffusion solver (<code>src/solver/lbm/</code>) passed four independent numerical benchmarks
+          (<code>validation/gates.ts</code>) and was anchored to empirical <em>Arabidopsis thaliana</em> Col-0 whole-chamber
+          gas exchange (<em>A</em> = 3.85 µmol m⁻² s⁻¹, <em>R<sub>d</sub></em> = 1.18 µmol m⁻² s⁻¹; Chew et al., 2022).</p>
+        <table>
+          <thead><tr><th>Gate</th><th>Benchmark Problem</th><th>Reference Solution</th><th>LBM (BGK / MRT)</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Lid-driven square cavity (Re = 100)</td><td>Ghia et al. (1982) centreline (L2 &lt; 0.05)</td><td class="ok">L2 = 0.0105 / 0.0115 ✓</td></tr>
+            <tr><td>2</td><td>Cylinder wake (Re = 100, blockage 0.17)</td><td>Kármán vortex shedding (St ≈ 0.19–0.20)</td><td class="ok">St = 0.192 / 0.200 ✓</td></tr>
+            <tr><td>3</td><td>Natural convection cavity (Ra = 10⁴, Pr = 0.71)</td><td>de Vahl Davis (1983), Nu = 2.238</td><td class="ok">Nu = 2.242 (0.18%) / 2.248 ✓</td></tr>
+            <tr><td>4</td><td>Pure 1-D step diffusion</td><td>½·erfc(x/√4Dt) analytic</td><td class="ok">L2 &lt; 10⁻⁴ ✓</td></tr>
+          </tbody>
+        </table>
+        <figure>
+          <img class="dark-bg" src="figures/F1_vernier_timeseries.png" alt="Measured 4.8-day closed-chamber Vernier trace around Arabidopsis." loading="lazy" />
+          <figcaption><b>Figure 1a — Empirical closed-chamber gas exchange.</b> Measured 4.8-day Vernier sensor trace of O<sub>2</sub> (6.6–32.8%), temperature, relative humidity, and absolute humidity around <em>Arabidopsis thaliana</em>.</figcaption>
+        </figure>
+        <figure>
+          <img class="dark-bg" src="figures/F5_chamber_validation.png" alt="Closed-chamber mass conservation and surface-to-bulk concentration gap." loading="lazy" />
+          <figcaption><b>Figure 1b — Closed-chamber CFD validation.</b> Total chamber gas tracks integrated stomatal flux to a relative mass-conservation error of 2×10⁻⁵ while a persistent concentration gap develops between the near-leaf fluid and the far wall.</figcaption>
+        </figure>
+      </section>
+
+      <section id="gravity">
+        <h2><span class="n">04</span>Part II — Gravity, Plant Architecture &amp; Forced Ventilation</h2>
+        <p>Across 150,000-step (26 s; 900,000-step / 156 s for µ<em>g</em> canopy) steady-state simulations verified to 0.00%
+          drift over the final 5 s (<code>T15_stationarity.csv</code>) and 0.87–3.16% fine-grid convergence index
+          (<code>T16_resolution_gci.csv</code>), reducing gravity from Earth (1<em>g</em>) through Mars (0.38<em>g</em>) and
+          Moon (0.17<em>g</em>) to microgravity (0<em>g</em>) collapses convective velocity as <em>u</em><sub>max</sub> ∝ √<em>g</em> → 0
+          and thickens the diffusive boundary layer δ = <em>D</em><sub>CO2</sub>/<em>g<sub>bl</sub></em> from 0.67 to 1.50 mm on a single
+          leaf, 1.23 to 2.45 mm on a rosette, and 5.02 to 11.42 mm in a dense microgreen canopy (<code>T2</code>, <code>T5</code>, <code>T13</code>).</p>
+        <figure>
+          <img class="dark-bg" src="figures/F3_plume_maps.png" alt="Steady-state water-vapour boundary layers across gravity and architecture." loading="lazy" />
+          <figcaption><b>Figure 2 — Steady-state water-vapour boundary layers.</b> Buoyant plume on Earth (left) → thick symmetric diffusive halo in microgravity (centre) → merged stagnant air trapped between shoots in a microgravity microgreen canopy (right).</figcaption>
+        </figure>
+        <figure>
+          <img class="dark-bg" src="figures/F4_gravity_scale.png" alt="Gravity scaling and architectural amplification." loading="lazy" />
+          <figcaption><b>Figure 3 — Gravity scaling and architectural amplification.</b> Single-leaf gravity sweep (left) and amplification across isolated leaf, rosette, and microgreen canopy architectures (right).</figcaption>
+        </figure>
+        <figure>
+          <img class="dark-bg" src="figures/F8_fan_by_scale.png" alt="Forced-ventilation requirement across leaf, rosette, and canopy scales." loading="lazy" />
+          <figcaption><b>Figure 4 — Forced ventilation scales steeply with planting density.</b> Using a pressure-pinned outlet paired with a density-matched inlet (99.6–100.9% throughput), an isolated leaf requires ≈ 2.0 cm/s airflow for Earth parity, whereas an overlapping rosette requires ≈ 6.1 cm/s (3× higher) and horizontal skimming flow does not restore a dense canopy within the low-Mach regime (≤ 3.3 cm/s).</figcaption>
+        </figure>
+      </section>
+
+      <section id="fvcb">
+        <h2><span class="n">05</span>Part III — Spaceflight Hardware Mass Balance &amp; Coupled FvCB Rubisco Kinetics</h2>
+        <p>Coupling the CFD boundary-layer conductances and 0-D hardware headspace mass balances (BRIC sealed, CARA
+          micropore-taped, VEGGIE ventilated) to an FvCB C<sub>3</sub> biochemical model reveals why hardware dominates the
+          metabolic baseline: in an illuminated sealed BRIC canister (30 mL headspace, 3 cm² leaf area), photosynthesis
+          draws headspace CO<sub>2</sub> down to the compensation point (Γ ≈ 50 ppm) within ~7 minutes, collapsing 12-h
+          carbon gain to <strong>1%</strong> of an unenclosed Earth control (vs <strong>90%</strong> in CARA and
+          <strong>100%</strong> in VEGGIE) and driving Rubisco oxygenation <em>φ</em> from <strong>18.0% to 46.2%</strong> at
+          60 µmol m⁻² s⁻¹. Because canister drawdown is a mass balance, it occurs symmetrically in both flight and ground
+          controls and causes the 1<em>g</em> and µ<em>g</em> boundary layers to converge as <em>A</em> → 0.</p>
+        <figure>
+          <img src="figures/fig01_hardware_atmosphere.png" alt="Growth hardware sets the bulk atmosphere at the leaf." loading="lazy" />
+          <figcaption><b>Figure 5 — Growth hardware, not gravity, sets the bulk atmosphere at the leaf.</b> (a) Series conductance chain from cabin air to Rubisco. (b) LBM leaf-surface CO<sub>2</sub> drawdown for BRIC, CARA, and VEGGIE. (c) 12-h photoperiod carbon gain (% of unenclosed 1<em>g</em> control). (d) Dynamic 0-D canister CO<sub>2</sub> and O<sub>2</sub> trajectories.</figcaption>
+        </figure>
+        <figure>
+          <img src="figures/fig02_fvcb_operating_points.png" alt="Coupled CFD-FvCB operating points and convergence of the gravity gap." loading="lazy" />
+          <figcaption><b>Figure 6 — Coupled CFD–FvCB Rubisco operating points.</b> (a) Rubisco oxygenation fraction φ vs canister CO<sub>2</sub> at 60 and 1000 µmol m⁻² s⁻¹. (b) Convergence of the microgravity-minus-ground difference Δφ as CO<sub>2</sub> is drawn down. (c) Relative microgravity assimilation deficit across leaf, rosette, and canopy scales. (d) The 22× dominance of the hardware effect over the microgravity effect.</figcaption>
+        </figure>
+        <figure>
+          <img src="figures/fig03_predicted_metabolome.png" alt="21-compound predicted metabolite hypothesis scaffold." loading="lazy" />
+          <figcaption><b>Figure 7 — The 21-compound predicted metabolite hypothesis scaffold.</b> Flux-propagated log<sub>2</sub> fold-change predictions across Tier 1 stoichiometric intermediates and Tier 2 carbon-starvation / RuBP pools (explicitly labelled as model output to address the 0/12 plant metabolomics gap in NASA OSDR).</figcaption>
+        </figure>
+      </section>
+
+      <section id="omics">
+        <h2><span class="n">06</span>Part IV — Multi-Omics Falsification in OSD-522 &amp; Across Five NASA OSDR Studies</h2>
+        <p>Testing the coupled model against OSD-522 (BRIC-LED) shoot RNA-seq (19,325 loci, 1,795 DEGs) and TMT proteomics
+          (5,160 proteins) confirmed <strong>8 of 9 directional calls in the transcriptome</strong> and <strong>4 of 7 in
+          the proteome</strong>: repression of photosystems, Rubisco, carbon fixation, and starch/sucrose metabolism;
+          strong induction of <em>DIN6/ASN1</em> carbon-starvation markers (+0.685, <em>p</em> = 2.6×10⁻³); and selective
+          maintenance of core photorespiratory enzymes above Rubisco (+0.239 transcriptome, <em>p</em> = 6.8×10⁻³; +0.285
+          proteome, <em>p</em> = 0.049). In PaintOmics 4 across 232 KEGG and MapMan pathways, ER unfolded protein response
+          (<code>ath04141</code>, <em>p</em> = 8.6×10⁻⁹) dominated globally while photorespiration ranked 214th of 232
+          (bottom 8%). Across six matched flight-versus-ground contrasts from five OSDR studies, illumination separated
+          every lit study from every dark study on carbon starvation over photosynthesis (<em>p</em> = 0.05).</p>
+        <figure>
+          <img src="figures/fig04_osd522_omics.png" alt="OSD-522 shoot RNA-seq and proteomics profiling." loading="lazy" />
+          <figcaption><b>Figure 8a — OSD-522 (BRIC-LED) shoot multi-omics profiling.</b> RNA-seq PCA, transcriptome volcano plot (1,795 DEGs at FDR &lt; 0.05), proteome volcano plot (5,160 proteins), and transcript-vs-protein log<sub>2</sub>FC concordance across 4,296 co-measured loci.</figcaption>
+        </figure>
+        <figure>
+          <img src="figures/fig05_blind_test.png" alt="Directional gene-set falsification test in OSD-522." loading="lazy" />
+          <figcaption><b>Figure 8b — Directional gene-set falsification test in OSD-522.</b> Eight of nine transcriptome gene-set calls and four of seven proteome calls match model predictions, with photorespiratory enzymes selectively maintained above repressed Rubisco.</figcaption>
+        </figure>
+        <figure>
+          <img src="figures/fig06_paintomics.png" alt="PaintOmics 4 multi-omics pathway integration and metabolite hub analysis." loading="lazy" />
+          <figcaption><b>Figure 9 — PaintOmics 4 multi-omics pathway integration and empirical metabolite hub test.</b> Endoplasmic reticulum protein processing (UPR, <em>p</em> = 8.6×10⁻⁹) dominates globally while photorespiration ranks 214th of 232; 7 of 15 metabolite neighbourhoods are significantly enriched for DEGs, exclusively in sugar-supply and amino-acid starvation hubs.</figcaption>
+        </figure>
+        <figure>
+          <img src="figures/fig07_hardware_ladder.png" alt="Cross-study evaluation across six NASA OSDR flight contrasts." loading="lazy" />
+          <figcaption><b>Figure 10a — Cross-study evaluation across six NASA OSDR contrasts.</b> Illumination separates all three lit contrasts (+0.41, +0.92, +2.58) from all three dark contrasts (−0.39, −1.95, −3.22; one-sided Mann–Whitney <em>p</em> = 0.05) on carbon starvation over photosynthesis.</figcaption>
+        </figure>
+        <figure>
+          <img src="figures/fig08_implications.png" alt="Experimental design to unconfound hardware carbon starvation from microgravity." loading="lazy" />
+          <figcaption><b>Figure 10b — Unconfounding hardware carbon starvation from microgravity.</b> Adding a ventilated ground control (three-arm design) or flying a 2×2 Gravity × Enclosure factorial design separates the 22× hardware starvation main effect from the microgravity main effect and their interaction.</figcaption>
+        </figure>
+      </section>
+
+      <section id="get">
+        <h2><span class="n">07</span>Read, Run &amp; Reuse (FAIR Package)</h2>
+        <div class="links">
+          <a class="lk" href="./"><b>▶ Live 2-D LBM CFD Workbench</b><span>Run the D2Q9/D2Q5 solver in your browser across 26 scenarios.</span></a>
+          <a class="lk" href="./explorer/"><b>🔬 FvCB &amp; Multi-Omics Explorer</b><span>Interactive FvCB calculator, OSD-522 browser, PaintOmics &amp; 6-study ladder.</span></a>
+          <a class="lk" href="Spaceflight_Biophysics_Multiomics_Manuscript.pdf"><b>📄 Manuscript PDF (Elsevier)</b><span>Compiled <code>elsarticle</code> preprint for <em>Prog. Biophys. Mol. Biol.</em></span></a>
+          <a class="lk" href="Spaceflight_Biophysics_Multiomics_SI.pdf"><b>📑 Supplementary PDF</b><span>Supplementary Tables S1–S10 &amp; Supplementary Figures S1–S8.</span></a>
+          <a class="lk" href="Spaceflight_Biophysics_Multiomics_Manuscript.docx"><b>📝 Manuscript (Word .docx)</b><span>Editable Word version of the integrated manuscript.</span></a>
+          <a class="lk" href="https://github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics" target="_blank" rel="noopener"><b>💻 GitHub &amp; Zenodo Archive</b><span>MIT code, CC-BY-4.0 data/figures, 45 verified tables in <code>MANIFEST.tsv</code>.</span></a>
+        </div>
+      </section>
+
+      <section id="cite">
+        <h2><span class="n">08</span>Citation</h2>
+        <div class="cite">
+          Barker, R.&nbsp;J. (2026). <b>From microgravity boundary-layer biophysics to the spaceflight multi-ome: a coupled
+          lattice-Boltzmann and Farquhar–von Caemmerer–Berry model of <em>Arabidopsis</em> gas exchange and enclosure carbon
+          starvation.</b> Submitted to <em>Progress in Biophysics and Molecular Biology</em> (Special Issue:
+          <em>Biophysics and Molecular Biology for Space Flight</em>).
+          <code>github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics</code> — see <code>CITATION.cff</code> and <code>.zenodo.json</code>.
+        </div>
+      </section>
+    </main>
+
+    <footer class="site">
+      Spaceflight-Plant-Biophysics-Multiomics — Richard J. Barker, Purdue University (ORCID 0000-0001-5681-9857).
+      Code MIT-licensed; manuscript, figures &amp; derived tables CC-BY-4.0.
+    </footer>
+  </div>
+
+  <script src="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/sites.js"></script>
+  <script src="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/theme.js"></script>
+  <script defer src="https://visitor-analytics.astrobotany.workers.dev/a.js"></script>
+</body>
+</html>

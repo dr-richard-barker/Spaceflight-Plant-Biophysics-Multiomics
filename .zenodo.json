@@ -1,0 +1,89 @@
+{
+  "title": "From microgravity boundary-layer biophysics to the spaceflight multi-ome: a coupled lattice-Boltzmann and Farquhar–von Caemmerer–Berry model of Arabidopsis gas exchange and enclosure carbon starvation",
+  "description": "FAIR research software, datasets, derived tables (45 tables across CFD and multi-omics), publication figures, interactive browser tools (2D D2Q9/D2Q5 lattice-Boltzmann CFD workbench and FvCB + NASA OSDR multi-omics explorer), and Elsevier elsarticle LaTeX/PDF/Word manuscript prepared for Progress in Biophysics and Molecular Biology (Special Issue: Biophysics and Molecular Biology for Space Flight).",
+  "upload_type": "software",
+  "license": "MIT",
+  "access_right": "open",
+  "creators": [
+    {
+      "name": "Barker, Richard J.",
+      "affiliation": "Purdue University, West Lafayette, IN, USA",
+      "orcid": "0000-0001-5681-9857"
+    }
+  ],
+  "keywords": [
+    "microgravity",
+    "spaceflight",
+    "Arabidopsis thaliana",
+    "boundary layer",
+    "computational fluid dynamics",
+    "lattice-Boltzmann",
+    "Farquhar-von Caemmerer-Berry",
+    "photorespiration",
+    "Rubisco",
+    "carbon starvation",
+    "multi-omics",
+    "transcriptomics",
+    "proteomics",
+    "metabolomics",
+    "NASA OSDR",
+    "GeneLab",
+    "BRIC-LED",
+    "CARA",
+    "VEGGIE",
+    "PaintOmics"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-522",
+      "relation": "isDerivedFrom",
+      "resource_type": "dataset",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-38",
+      "relation": "isDerivedFrom",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-321",
+      "relation": "isDerivedFrom",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-678",
+      "relation": "isDerivedFrom",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://osdr.nasa.gov/bio/repo/data/studies/OSD-427",
+      "relation": "isDerivedFrom",
+      "scheme": "url"
+    },
+    {
+      "identifier": "10.7488/ds/3453",
+      "relation": "isDerivedFrom",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1093/nar/gkac352",
+      "relation": "cites",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1007/BF00386231",
+      "relation": "cites",
+      "scheme": "doi"
+    },
+    {
+      "identifier": "10.1038/s41526-023-00247-6",
+      "relation": "cites",
+      "scheme": "doi"
+    }
+  ]
+}

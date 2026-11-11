@@ -1,0 +1,1 @@
+{"id":"hw-veggie","scale":"leaf","gravity":0,"hardware":"VEGGIE","steps":150000,"meanAbs":0.086,"peakAbs":0.129,"cov":0.3637,"p10":0.0354,"p50":0.0942,"p90":0.1235,"fracWorse":0,"drift":0}

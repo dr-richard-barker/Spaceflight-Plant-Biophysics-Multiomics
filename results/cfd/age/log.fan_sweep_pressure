@@ -1,0 +1,14 @@
+Earth-1g   ΔC_H2O=0.128  u_max=4.61e-2
+µg (still) ΔC_H2O=0.240
+fan U=0.005 (0.8 cm/s)  ΔC_H2O=0.176  u_max=8.03e-3
+fan U=0.01 (1.7 cm/s)  ΔC_H2O=0.135  u_max=1.58e-2
+fan U=0.02 (3.3 cm/s)  ΔC_H2O=0.101  u_max=3.05e-2
+fan U=0.03 (5.0 cm/s)  ΔC_H2O=0.085  u_max=4.40e-2
+fan U=0.04 (6.6 cm/s)  ΔC_H2O=0.075  u_max=5.69e-2
+fan U=0.05 (8.3 cm/s)  ΔC_H2O=0.068  u_max=6.93e-2
+fan U=0.07 (11.6 cm/s)  ΔC_H2O=0.058  u_max=9.33e-2
+fan U=0.1 (16.6 cm/s)  ΔC_H2O=0.049  u_max=1.29e-1
+fan U=0.15 (24.9 cm/s)  ΔC_H2O=0.041  u_max=1.88e-1
+
+=> Earth-equivalent ventilation: 0.012 lattice ≈ 2.0 cm/s
+wrote T6b_forced_airflow_pressure_outlet.csv

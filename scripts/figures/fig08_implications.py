@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""Figure 8 — what follows for experiment design.
+
+a  the confound, drawn: what a flight-vs-ground contrast can and cannot see
+b  the three-arm design that separates hardware from gravity (and 2x2 interaction extension)
+c  the archive gap this analysis ran into
+"""
+from __future__ import annotations
+import os, sys
+import matplotlib.pyplot as plt
+import pandas as pd
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import style  # noqa: E402
+from paths import FIGURES, TABLES  # noqa: E402
+
+
+def box(ax, x, y, w, h, label, fc, ec, fontsize=6.9):
+    ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.045",
+                                facecolor=fc, edgecolor=ec, linewidth=0.9))
+    ax.text(x + w / 2, y + h / 2, label, ha="center", va="center", fontsize=fontsize)
+
+
+def model_numbers() -> tuple[float, dict]:
+    """Hardware/gravity ratio (T06) and the deficit range per light and scale (T13)."""
+    t06 = pd.read_csv(os.path.join(TABLES, "T06_predicted_compounds.tsv"), sep="\t", comment="#")
+    ratio = t06["log2FC_BRIC_vs_VENTED"].abs().max() / t06["log2FC_FLT_vs_GC"].abs().max()
+    t13 = pd.read_csv(os.path.join(TABLES, "T13_light_sensitivity.tsv"), sep="\t", comment="#")
+    d = t13[t13["quantity"] == "deficit"]
+    deficit = {(int(r.Q_umol_m2_s), r.scale): (r.deficit_min_percent, r.deficit_max_percent)
+               for r in d.itertuples()}
+    return ratio, deficit
+
+
+def panel_a(ax):
+    style.panel(ax, "a", "What the standard contrast cannot see")
+    ratio, deficit = model_numbers()
+    ax.set_xlim(0, 10); ax.set_ylim(0, 6.4); ax.axis("off"); ax.grid(False)
+    box(ax, 0.3, 4.25, 4.3, 1.4, "FLIGHT\nsealed, lit, $\\mu$g", "#FBD5BC", "#8C5A3C", fontsize=6.8)
+    box(ax, 0.3, 2.05, 4.3, 1.4, "GROUND CONTROL\nsealed, lit, 1 $g$", "#E4E7EB", "#5A6169", fontsize=6.8)
+    ax.add_patch(FancyArrowPatch((4.75, 4.95), (5.75, 3.95), arrowstyle="-|>",
+                                 mutation_scale=12, color=style.INK, linewidth=1.3))
+    ax.add_patch(FancyArrowPatch((4.75, 2.75), (5.75, 3.55), arrowstyle="-|>",
+                                 mutation_scale=12, color=style.INK, linewidth=1.3))
+    box(ax, 5.85, 3.0, 4.0, 1.5, "the published\nflight-vs-ground\ncontrast", "white",
+        style.INK, fontsize=6.8)
+    ax.text(2.45, 6.05, "CO$_2$ drawn down in BOTH arms", ha="center", fontsize=7.2,
+            color=style.VERMILION, fontweight="bold")
+    ax.text(7.85, 2.65, "hardware effect\nsubtracts out —\n"
+                        f"{ratio:.0f}$\\times$ the gravity\neffect, invisible",
+            ha="center", va="top", fontsize=6.6,
+            color=style.VERMILION)
+    hi, lo = deficit[(1000, "rosette")], deficit[(60, "rosette")]
+    ax.text(0.3, 1.55, f"What survives is a persistent ~{hi[0]:.0f}–{hi[1]:.0f} %\n"
+                       "rosette assimilation penalty at saturating\n"
+                       f"light (under {lo[1]:.1f} % at OSD-522's), and\n"
+                       "downstream of it a carbon-starvation\n"
+                       "signature — which is what the omics show.",
+            fontsize=6.7, va="top", color=style.INK)
+
+
+def panel_b(ax):
+    style.panel(ax, "b", "The design that separates them")
+    ax.set_xlim(0, 10); ax.set_ylim(0, 6.4); ax.axis("off"); ax.grid(False)
+    arms = [("ARM 1  flight, sealed", "#FBD5BC", 4.6),
+            ("ARM 2  ground, sealed", "#E4E7EB", 2.9),
+            ("ARM 3  ground, vented", "#D6ECF7", 1.2)]
+    for label, fc, y in arms:
+        box(ax, 0.4, y, 5.0, 1.25, label, fc, "#5A6169", fontsize=7.0)
+    ax.add_patch(FancyArrowPatch((5.7, 5.22), (7.0, 4.6), arrowstyle="-|>",
+                                 mutation_scale=11, color=style.BLUE, linewidth=1.2))
+    ax.add_patch(FancyArrowPatch((5.7, 3.52), (7.0, 4.3), arrowstyle="-|>",
+                                 mutation_scale=11, color=style.BLUE, linewidth=1.2))
+    ax.text(7.15, 4.45, "1 $-$ 2 = gravity", fontsize=7.0, color=style.BLUE,
+            va="center", fontweight="bold")
+    ax.add_patch(FancyArrowPatch((5.7, 3.22), (7.0, 2.4), arrowstyle="-|>",
+                                 mutation_scale=11, color=style.VERMILION, linewidth=1.2))
+    ax.add_patch(FancyArrowPatch((5.7, 1.82), (7.0, 2.1), arrowstyle="-|>",
+                                 mutation_scale=11, color=style.VERMILION, linewidth=1.2))
+    ax.text(7.15, 2.25, "2 $-$ 3 = hardware", fontsize=7.0, color=style.VERMILION,
+            va="center", fontweight="bold")
+    # Reviewer Item 18: note 3-arm as minimum main-effect design and what 2x2 adds
+    ax.text(0.4, 0.65, "Three arms estimate main effects (gravity & hardware).\n"
+                       "Adding Arm 4 (flight, vented) provides the full\n"
+                       "2$\\times$2 factorial test for a gravity$\\times$enclosure interaction.",
+            fontsize=6.5, va="top", color=style.INK)
+
+
+def panel_c(ax):
+    style.panel(ax, "c", "The gap this ran into")
+    ax.set_xlim(0, 10); ax.set_ylim(0, 6.4); ax.axis("off"); ax.grid(False)
+    items = [
+        ("0 of 12", "OSDR metabolomics studies that are of a plant", style.VERMILION),
+        ("12 of 567", "OSDR studies that are metabolite profiling,\n"
+                      "all mouse, human, rat or microbial", style.INK),
+        ("0 known", "in-canister CO$_2$ logs, any BRIC-class flight", style.VERMILION),
+    ]
+    y = 6.0
+    for big, small, colour in items:
+        ax.text(0.3, y, big, fontsize=13.5, fontweight="bold", color=colour, va="top")
+        ax.text(0.35, y - 0.72, small, fontsize=6.7, va="top", color=style.INK)
+        y -= 2.05
+    ax.text(0.3, y + 0.62, "A ~20-compound targeted panel on archived material\n"
+                           "would be the first plant spaceflight metabolome.",
+            fontsize=6.7, va="top", color=style.INK, fontweight="bold")
+
+
+def main():
+    style.apply()
+    fig, axes = plt.subplots(1, 3, figsize=(7.6, 3.1))
+    panel_a(axes[0]); panel_b(axes[1]); panel_c(axes[2])
+    fig.subplots_adjust(top=0.82, bottom=0.03, left=0.01, right=0.99, wspace=0.16)
+    fig.suptitle("Designing the experiment that could tell hardware from gravity",
+                 fontsize=11, fontweight="bold", x=0.008, ha="left", y=0.985)
+    style.save(fig, "fig08_implications", FIGURES)
+
+
+if __name__ == "__main__":
+    main()
