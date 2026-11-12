@@ -1199,6 +1199,7 @@
       if (coseBtn) {
         coseBtn.setAttribute('title', theme === 'dark' ? 'Switch to light' : 'Switch to dark');
       }
+      window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
     }
 
     // Hash handler on load

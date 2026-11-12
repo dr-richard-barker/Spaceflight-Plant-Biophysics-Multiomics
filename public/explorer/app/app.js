@@ -15,20 +15,23 @@ const C = {};
 function readTheme() {
   const cs = getComputedStyle(document.documentElement);
   const v = (name, fallback) => (cs.getPropertyValue(name).trim() || fallback);
+  const themeAttr = document.documentElement.getAttribute("data-theme");
+  const isDark = themeAttr === "dark" || (!themeAttr && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
   Object.assign(C, {
-    ink: v("--ink", "#1a1d21"),
-    soft: v("--ink-soft", "#4a5058"),
-    faint: v("--ink-faint", "#8a8f98"),
-    line: v("--line", "#dfe2e6"),
-    accent: v("--accent", "#0072b2"),
-    vermilion: v("--vermilion", "#d55e00"),
-    orange: v("--orange", "#e69f00"),
-    green: v("--green", "#009e73"),
-    sky: v("--sky", "#56b4e9"),
-    purple: v("--purple", "#cc79a7"),
-    grey: v("--ink-faint", "#8a8f98"),
-    // Marker outlines need the page background, not white, or they ring dark-mode dots.
-    bg: v("--bg", "#ffffff"),
+    ink: v("--ink", isDark ? "#f8fafc" : "#0f172a"),
+    soft: v("--ink-soft", isDark ? "#cbd5e1" : "#334155"),
+    faint: v("--ink-faint", isDark ? "#94a3b8" : "#64748b"),
+    line: v("--line", isDark ? "#233145" : "#e2e8f0"),
+    accent: v("--accent", isDark ? "#60a5fa" : "#2563eb"),
+    vermilion: v("--vermilion", isDark ? "#fb923c" : "#c2410c"),
+    orange: v("--orange", isDark ? "#fbbf24" : "#d97706"),
+    green: v("--green", isDark ? "#34d399" : "#047857"),
+    sky: v("--sky", isDark ? "#38bdf8" : "#0284c7"),
+    purple: v("--purple", isDark ? "#c084fc" : "#9333ea"),
+    grey: v("--ink-faint", isDark ? "#94a3b8" : "#64748b"),
+    // Card background for marker outlines so they cleanly match the card surface
+    bg: v("--card", isDark ? "#131b26" : "#ffffff"),
   });
 }
 readTheme();
@@ -70,23 +73,24 @@ function axes(svg, { w, h, pad, xlim, ylim, xlabel, ylabel, yticks = 5, xticks =
     svg.append(el("line", { x1: pad.l, x2: w - pad.r, y1: Y(v), y2: Y(v),
                             stroke: C.line, "stroke-dasharray": "2 3" }));
     svg.append(el("text", { x: pad.l - 7, y: Y(v) + 3.5, "text-anchor": "end",
-                            "font-size": 10, fill: C.faint }, fmt(v)));
+                            "font-size": 10.5, "font-weight": "500", fill: C.soft }, fmt(v)));
   }
   for (let i = 0; i <= xticks; i++) {
     const v = x0 + ((x1 - x0) * i) / xticks;
-    svg.append(el("text", { x: X(v), y: h - pad.b + 15, "text-anchor": "middle",
-                            "font-size": 10, fill: C.faint }, fmt(v)));
+    svg.append(el("text", { x: X(v), y: h - pad.b + 16, "text-anchor": "middle",
+                            "font-size": 10.5, "font-weight": "500", fill: C.soft }, fmt(v)));
   }
   svg.append(el("line", { x1: pad.l, x2: w - pad.r, y1: h - pad.b, y2: h - pad.b,
-                          stroke: C.faint }));
-  svg.append(el("line", { x1: pad.l, x2: pad.l, y1: pad.t, y2: h - pad.b, stroke: C.faint }));
+                          stroke: C.soft, "stroke-width": 1.2 }));
+  svg.append(el("line", { x1: pad.l, x2: pad.l, y1: pad.t, y2: h - pad.b,
+                          stroke: C.soft, "stroke-width": 1.2 }));
   if (xlabel) svg.append(el("text", { x: (pad.l + w - pad.r) / 2, y: h - 4,
-                                      "text-anchor": "middle", "font-size": 11,
-                                      fill: C.soft }, xlabel));
+                                      "text-anchor": "middle", "font-size": 11.5, "font-weight": "600",
+                                      fill: C.ink }, xlabel));
   if (ylabel) {
-    const t = el("text", { x: 12, y: (pad.t + h - pad.b) / 2, "text-anchor": "middle",
-                           "font-size": 11, fill: C.soft,
-                           transform: `rotate(-90 12 ${(pad.t + h - pad.b) / 2})` }, ylabel);
+    const t = el("text", { x: 14, y: (pad.t + h - pad.b) / 2, "text-anchor": "middle",
+                           "font-size": 11.5, "font-weight": "600", fill: C.ink,
+                           transform: `rotate(-90 14 ${(pad.t + h - pad.b) / 2})` }, ylabel);
     svg.append(t);
   }
   return { X, Y };
@@ -627,18 +631,40 @@ document.querySelectorAll("[data-preset]").forEach((b) =>
     renderModel();
   }));
 
-/* Follow the OS scheme live: re-read the tokens and repaint every SVG. */
-if (window.matchMedia) {
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    readTheme();
-    renderModel();
-    buildEnclosure().catch(() => {});
-    drawVolcano();
-    drawHeatmap();
-    drawSankey();
-    buildLadder().catch(() => {});
-  });
+/* Re-read theme tokens and repaint every SVG and KPI card when theme changes */
+function onThemeChange() {
+  readTheme();
+  renderModel();
+  buildEnclosure().catch(() => {});
+  drawVolcano();
+  drawHeatmap();
+  drawSankey();
+  buildLadder().catch(() => {});
 }
+
+/* Follow the OS scheme live: */
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", onThemeChange);
+}
+
+/* Follow manual toggle & data-theme mutation on html element: */
+const themeObserver = new MutationObserver((mutations) => {
+  for (const m of mutations) {
+    if (m.attributeName === "data-theme") {
+      onThemeChange();
+      break;
+    }
+  }
+});
+themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+/* Also listen to explicit themechange and storage events: */
+window.addEventListener("themechange", onThemeChange);
+window.addEventListener("storage", (e) => {
+  if (e.key === "barker.theme" || e.key === "color-scheme") {
+    onThemeChange();
+  }
+});
 
 buildControls();
 renderModel();

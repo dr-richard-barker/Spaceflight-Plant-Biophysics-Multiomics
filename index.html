@@ -286,6 +286,7 @@
         if (coseBtn) {
           coseBtn.setAttribute('title', theme === 'dark' ? 'Switch to light' : 'Switch to dark');
         }
+        window.dispatchEvent(new CustomEvent('themechange', { detail: { theme } }));
       }
       window.addEventListener('DOMContentLoaded', () => {
         const savedTheme = localStorage.getItem('barker.theme') || localStorage.getItem('color-scheme') ||
