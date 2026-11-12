@@ -36,7 +36,7 @@ dt = np.median(np.diff(t))
 # Fig 1 — the raw multi-day chamber trace
 fig, ax = plt.subplots(4, 1, figsize=(8, 8.5), sharex=True)
 ax[0].plot(days, o2, color="#2a7de1", lw=0.8); ax[0].set_ylabel("O$_2$ (%)")
-ax[0].set_title("Vernier whole-chamber trace — Arabidopsis, 4.8 days")
+ax[0].set_title("a  Vernier whole-chamber trace — Arabidopsis, 4.8 days", loc="left", fontweight="bold", fontsize=10.5, pad=8)
 ax[1].plot(days, temp, color="#e0654e", lw=0.8); ax[1].set_ylabel("Temp (°C)")
 ax[2].plot(days, rh, color="#2fbf71", lw=0.8); ax[2].set_ylabel("RH (%)")
 ax[3].plot(days, ah, color="#8a5cf6", lw=0.8); ax[3].set_ylabel("Abs. hum.\n(g m$^{-3}$)")

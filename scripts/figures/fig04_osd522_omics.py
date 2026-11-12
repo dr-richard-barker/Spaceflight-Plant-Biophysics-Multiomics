@@ -63,18 +63,12 @@ def volcano(ax, letter, title, df, lfc, p, n_label):
     ax.set_xlabel("log$_2$ fold change (flight / ground)")
     ax.set_ylabel(f"$-$log$_{{10}}$ {n_label}")
     ax.set_ylim(top=max(ax.get_ylim()[1], d["y"].max() * 1.25))
-    dropped = n_measured - len(d)
-    # The cloud reaches the top-right corner, so both notes need an opaque background.
+    # The note with summary counts
     box = dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor=style.GREY_LIGHT, linewidth=0.5, alpha=0.95)
     ax.text(0.98, 0.97, f"{int(sig.sum()):,} of {len(d):,} at FDR < {ALPHA}\n"
                         f"{int((sig & (d[lfc] > 0)).sum()):,} up   "
                         f"{int((sig & (d[lfc] < 0)).sum()):,} down",
             transform=ax.transAxes, ha="right", va="top", fontsize=6.5, bbox=box)
-    if dropped:
-        ax.text(0.98, 0.81, f"{dropped:,} of {n_measured:,} measured have no adjusted\n"
-                            f"$p$ and cannot be placed on a volcano",
-                transform=ax.transAxes, ha="right", va="top", fontsize=5.9,
-                color=style.GREY, bbox=box)
     return d
 
 

@@ -191,7 +191,8 @@ To determine the ventilation velocity required to overcome this microgravity dif
 \centering
 \includegraphics[width=\textwidth]{F8_fan_by_scale.png}
 \caption{\textbf{Forced ventilation restores Earth-equivalent boundary-layer conductance across plant architectures.}
-Steady-state boundary-layer conductance $g_{bl}$ as a function of horizontal fan airflow velocity ($0\text{--}20\,\cmsu$) in microgravity (\texttt{F8\_fan\_by\_scale.png}). Dotted horizontal lines indicate the still-air $1\,g$ Earth baseline for each architecture. An airflow of $\approx 2.0\,\cmsu$ restores Earth $g_{bl}$ for an isolated leaf, whereas a rosette requires $\approx 6.1\,\cmsu$ and a dense canopy requires $>15\,\cmsu$ due to mutual aerodynamic sheltering.}
+\textbf{a}, Forced ventilation in $\mu g$ across three plant architectures (isolated leaf, overlapping rosette, microgreen canopy); dashed lines indicate Earth $1\,g$ boundary-layer conductance levels, stars denote Earth-equivalent airflow points, and hollow symbols indicate low-Mach solver limits (\texttt{F8\_fan\_by\_scale.png}).
+\textbf{b}, Earth-equivalent airflow required to restore natural convection across architectures.}
 \label{fig:fan_scale}
 \end{figure*}
 
@@ -323,11 +324,14 @@ Before querying the flight multi-omics data, we pre-registered sixteen direction
 
 \begin{figure*}[tbp]
 \centering
-\includegraphics[width=0.49\textwidth]{fig04_osd522_omics.pdf}\hfill
-\includegraphics[width=0.49\textwidth]{fig05_blind_test.pdf}
+\includegraphics[width=\textwidth]{fig09_osd522_falsification.pdf}
 \caption{\textbf{OSD-522 (BRIC-LED) shoot multi-omics profiling and directional gene-set falsification test.}
-\textbf{Left} (\texttt{fig04\_osd522\_omics.pdf}): \textbf{a}, Principal component analysis of OSD-522 shoot RNA-seq libraries ($6$ flight vs.\ $6$ ground). \textbf{b}, Transcriptome volcano plot ($1{,}795$ DEGs at $\mathrm{FDR}<0.05$). \textbf{c}, Shoot proteome volcano plot ($5{,}160$ proteins). \textbf{d}, Transcript-versus-protein $\log_2\mathrm{FC}$ comparison across $4{,}296$ co-measured loci.
-\textbf{Right} (\texttt{fig05\_blind\_test.pdf}): \textbf{a}, Directional predictions versus observed Mann--Whitney median $\log_2\mathrm{FC}$ shifts across nine KEGG-derived gene sets in the transcriptome (8 of 9 matched) and proteome (4 of 7 matched). \textbf{b}, Set-versus-set relative contrasts demonstrating selective maintenance of core photorespiratory enzymes above Rubisco ($+0.239$ transcriptome, $p = 6.8\times 10^{-3}$; $+0.285$ proteome, $p = 4.9\times 10^{-2}$) and strong induction of \textit{DIN} carbon-starvation markers over photosynthetic machinery ($+0.923$, $p = 5.3\times 10^{-6}$).}
+\textbf{a}, Principal component analysis of OSD-522 shoot RNA-seq libraries ($6$ flight vs.\ $6$ ground).
+\textbf{b}, Shoot transcriptome volcano plot ($1{,}795$ DEGs at $\mathrm{FDR}<0.05$).
+\textbf{c}, Shoot proteome volcano plot ($5{,}160$ proteins, $2{,}144$ at $\mathrm{FDR}<0.05$).
+\textbf{d}, Transcript-versus-protein $\log_2\mathrm{FC}$ comparison across $4{,}296$ co-measured loci ($\rho = +0.04$, $p = 8.9\times 10^{-3}$).
+\textbf{e}, Pre-registered directional predictions versus observed Mann--Whitney median $\log_2\mathrm{FC}$ shifts across nine KEGG-derived gene sets in the transcriptome ($8$ of $9$ matched) and proteome ($4$ of $7$ matched).
+\textbf{f}, Set-versus-set relative contrasts demonstrating selective maintenance of core photorespiratory enzymes above Rubisco ($+0.239$ transcriptome, $p = 6.8\times 10^{-3}$; $+0.285$ proteome, $p = 4.9\times 10^{-2}$) and strong induction of \textit{DIN} carbon-starvation markers over photosynthetic machinery ($+0.923$, $p = 5.3\times 10^{-6}$; \texttt{fig09\_osd522\_falsification.pdf}).}
 \label{fig:osd522_blind}
 \end{figure*}
 
@@ -408,17 +412,21 @@ OSD-7 & ABRS / TAGES & Ventilated & Whole plant & Col-0 WT & $12\,\mathrm{d}$ & 
 \end{tabular*}
 \end{table*}
 
-\begin{figure*}[tbp]
+\begin{figure*}[p]
 \centering
-\includegraphics[width=0.52\textwidth]{fig07_hardware_ladder.pdf}\hfill
-\includegraphics[width=0.46\textwidth]{fig08_implications.pdf}
+\includegraphics[width=0.98\textwidth]{fig10_hardware_ladder_implications.pdf}
 \caption{\textbf{Cross-study evaluation across six OSDR flight contrasts and experimental design to unconfound hardware from microgravity.}
-\textbf{Left} (\texttt{fig07\_hardware\_ladder.pdf}): \textbf{a}, Matrix of six flight-versus-ground contrasts across five OSDR studies. \textbf{b}, Illumination separates all three lit contrasts ($+0.41$, $+0.92$, $+2.58$) from all three dark contrasts ($-0.39$, $-1.95$, $-3.22$; one-sided Mann--Whitney $p = 0.05$) on the carbon-starvation (\textit{DIN}) over photosynthesis contrast (\texttt{T12\_ladder\_contrasts.tsv}). \textbf{c}, Among lit studies, the predicted monotonic gradient across enclosure classes does not hold ($\rho = -0.50$, $p = 0.67$), with dimly lit CARA (\texttt{OSD-678}, $4\text{--}6\,\ums$) sitting highest. \textbf{d}, Heatmap of Mann--Whitney shifts across all ten evaluated gene sets (\texttt{T11\_hardware\_ladder.tsv}).
-\textbf{Right} (\texttt{fig08\_implications.pdf}): \textbf{a}, Why standard two-arm spaceflight designs (sealed flight vs.\ sealed ground) cancel the $22\times$ hardware starvation effect while measuring microgravity in carbon-starved plants. \textbf{b}, Proposed three-arm (adding vented ground) and $2\times 2$ factorial (adding vented flight) designs that separate main effects of enclosure atmosphere, microgravity, and their interaction. \textbf{c}, Summary of the OSDR plant metabolomics and in-canister logging archive gaps.}
+\textbf{a}, Matrix of six flight-versus-ground contrasts across five NASA OSDR studies laid out by enclosure class (sealed, taped, ventilated) and illumination.
+\textbf{b}, Illumination separates all three lit contrasts ($+0.41$, $+0.92$, $+2.58$) from all three dark contrasts ($-0.39$, $-1.95$, $-3.22$; one-sided Mann--Whitney $p = 0.05$) on the carbon-starvation (\textit{DIN}) over photosynthesis contrast (\texttt{T12\_ladder\_contrasts.tsv}).
+\textbf{c}, Among lit studies, the predicted monotonic gradient across enclosure classes does not hold ($\rho = -0.50$, $p = 0.67$), with dimly lit CARA (\texttt{OSD-678}, $4\text{--}6\,\ums$) sitting highest.
+\textbf{d}, Multi-study response matrix showing Mann--Whitney shifts across all ten evaluated gene sets and six contrasts (\texttt{T11\_hardware\_ladder.tsv}).
+\textbf{e}, Why standard two-arm spaceflight designs (sealed flight vs.\ sealed ground) cancel the $22\times$ hardware starvation effect while measuring microgravity in carbon-starved plants.
+\textbf{f}, Proposed three-arm (adding vented ground) and $2\times 2$ factorial (adding vented flight) designs that separate main effects of enclosure atmosphere, microgravity, and their interaction.
+\textbf{g}, Summary of the NASA OSDR plant metabolomics and in-canister environmental logging archive gaps (\texttt{fig10\_hardware\_ladder\_implications.pdf}).}
 \label{fig:ladder_implications}
 \end{figure*}
 
-Evaluating the ten gene sets and set-versus-set contrasts across all six studies (\texttt{T11\_hardware\_ladder.tsv}, \texttt{T12\_ladder\_contrasts.tsv}; Fig.~\ref{fig:ladder_implications} left) revealed two sharp empirical findings:
+Evaluating the ten gene sets and set-versus-set contrasts across all six studies (\texttt{T11\_hardware\_ladder.tsv}, \texttt{T12\_ladder\_contrasts.tsv}; Fig.~\ref{fig:ladder_implications}a--d) revealed two sharp empirical findings:
 \begin{enumerate}
     \item \textbf{Illumination completely separates the six spaceflight contrasts}: On the primary carbon-starvation-over-photosynthesis contrast ($\text{\textit{DIN}} - \text{photosynthesis apparatus}$), \textbf{every illuminated contrast is positive} ($+0.41$ in VEGGIE OSD-427, $+0.92$ in BRIC-LED OSD-522, and $+2.58$ in lit CARA OSD-678) and \textbf{every dark contrast is negative} ($-0.39$ in dark BRIC OSD-38, $-1.95$ in dark BRIC OSD-321, and $-3.22$ in dark CARA OSD-678; descriptive one-sided Mann--Whitney $p = 0.05$; Fig.~\ref{fig:ladder_implications}b). This separation is physically consistent with our central mechanism: photosynthetic $\mathrm{CO_2}$ drawdown and boundary-layer $\mathrm{CO_2}$ depletion require light; in darkness, respiration releases $\mathrm{CO_2}$ rather than consuming it.
     \item \textbf{The simple one-dimensional ranking across enclosure classes does not hold}: Among the three illuminated contrasts, sealed BRIC-LED ($+0.92$) sits above ventilated VEGGIE ($+0.41$) as predicted, but the dimly lit CARA plates in OSD-678 ($+2.58$, grown in only $4\text{--}6\,\ums$ of ambient cabin light near the light compensation point, and with unrecorded plate-sealing tape geometry in OSDR) sit highest (Spearman $\rho = -0.50$, $p = 0.67$; Fig.~\ref{fig:ladder_implications}c).
@@ -436,7 +444,7 @@ By uniting a validated 2-D lattice-Boltzmann fluid and mass-transport solver wit
     \item \textbf{Enclosure headspace drawdown ($10^1\text{--}10^2\,\mathrm{mm}$, $C_{\text{cabin}} \to C_a$)} is a hardware effect. In an illuminated, hermetically sealed canister such as BRIC-LED, photosynthetic uptake exhausts the $\sim 400\,\mathrm{ppm}$ headspace $\mathrm{CO_2}$ to the compensation point in $\sim 7\,\mathrm{min}$, slashing 12\,h carbon gain to $\approx 1\%$ of an unenclosed control and driving Rubisco oxygenation $\varphi$ from $18\%$ to $46\%$ (Fig.~\ref{fig:hardware}, Fig.~\ref{fig:fvcb}). This enclosure effect is $\approx 22\times$ larger than the microgravity boundary-layer effect, and because it is a volume mass balance, it occurs in the $1\,g$ ground control canister just as rapidly as in flight.
 \end{enumerate}
 
-This interaction explains why the microgravity boundary-layer penalty and canister carbon starvation cannot be treated as simple additive stresses. As canister $\mathrm{CO_2}$ falls toward the compensation point, net assimilation $A$ approaches zero, so the concentration drop across the boundary layer ($\Delta C_{bl} = A/g_{bl}$) vanishes and the $1\,g$ and $\mu g$ operating points converge (Fig.~\ref{fig:fvcb}b). Likewise, inside a sealed BRIC Petri dish, transpirational humidification saturates the shallow $7.4\,\mathrm{mm}$ headspace within $1\text{--}2\,\mathrm{min}$, extinguishing solutal buoyancy at $1\,g$ so that even the physical conductances $g_{bl}(1\,g)$ and $g_{bl}(0\,g)$ converge (Supplementary Fig.~\ref{fig:s_dish_feedback}). Consequently, a flight-versus-ground comparison in illuminated sealed hardware measures the residual effect of microgravity inside plants that their own growth canister has already severely carbon-starved (Fig.~\ref{fig:ladder_implications} right). Consistent with this transport-limited framework, whole-stand gas exchange of wheat in microgravity is indistinguishable from $1\,g$ at saturating $\mathrm{CO_2}$ \citep{monje2005}---the exact regime in which boundary-layer and enclosure $\mathrm{CO_2}$ limitations are relieved.
+This interaction explains why the microgravity boundary-layer penalty and canister carbon starvation cannot be treated as simple additive stresses. As canister $\mathrm{CO_2}$ falls toward the compensation point, net assimilation $A$ approaches zero, so the concentration drop across the boundary layer ($\Delta C_{bl} = A/g_{bl}$) vanishes and the $1\,g$ and $\mu g$ operating points converge (Fig.~\ref{fig:fvcb}b). Likewise, inside a sealed BRIC Petri dish, transpirational humidification saturates the shallow $7.4\,\mathrm{mm}$ headspace within $1\text{--}2\,\mathrm{min}$, extinguishing solutal buoyancy at $1\,g$ so that even the physical conductances $g_{bl}(1\,g)$ and $g_{bl}(0\,g)$ converge (Supplementary Fig.~\ref{fig:s_dish_feedback}). Consequently, a flight-versus-ground comparison in illuminated sealed hardware measures the residual effect of microgravity inside plants that their own growth canister has already severely carbon-starved (Fig.~\ref{fig:ladder_implications}e). Consistent with this transport-limited framework, whole-stand gas exchange of wheat in microgravity is indistinguishable from $1\,g$ at saturating $\mathrm{CO_2}$ \citep{monje2005}---the exact regime in which boundary-layer and enclosure $\mathrm{CO_2}$ limitations are relieved.
 
 \subsection*{What the model explains in the spaceflight multi-ome, and what it does not}
 
@@ -445,17 +453,17 @@ In OSD-522 (BRIC-LED), the coupled model accurately predicted eight of nine dire
 Equally important are the three places where the data falsified or exceeded the gas-transport model:
 \begin{enumerate}
     \item \textbf{Dominance of the endoplasmic reticulum unfolded protein response (UPR)}: The single strongest pathway enrichment in OSD-522 is ER protein processing (\texttt{ath04141}, $p = 8.6\times 10^{-9}$; Fig.~\ref{fig:paintomics}b), a conserved spaceflight stress signature also highlighted in OSD-321 \citep{osd321} that leaf gas transport does not explain. Biophysical and metabolic models of spaceflight adaptation must therefore treat ER proteostasis alongside gas transport rather than assuming gas exchange explains all stress responses.
-    \item \textbf{Absence of broad photorespiratory induction in the multi-ome}: While our initial steady-state hypothesis predicted elevated photorespiratory enzymes, the OSD-522 data showed only relative preservation above Rubisco, not absolute induction (Fig.~\ref{fig:osd522_blind}). This matches our coupled FvCB finding: because canister $\mathrm{CO_2}$ exhaustion converges the $1\,g$ and $\mu g$ boundary layers, the differential flux between flight and ground vanishes.
+    \item \textbf{Absence of broad photorespiratory induction in the multi-ome}: While our initial steady-state hypothesis predicted elevated photorespiratory enzymes, the OSD-522 data showed only relative preservation above Rubisco, not absolute induction (Fig.~\ref{fig:osd522_blind}e,f). This matches our coupled FvCB finding: because canister $\mathrm{CO_2}$ exhaustion converges the $1\,g$ and $\mu g$ boundary layers, the differential flux between flight and ground vanishes.
     \item \textbf{Non-monotonicity across lit hardware}: Dimly lit CARA plates in OSD-678 showed a stronger starvation-over-photosynthesis ratio ($+2.58$) than sealed BRIC-LED ($+0.92$), likely because the low $4\text{--}6\,\ums$ irradiance placed the seedlings near the light compensation point while unrecorded tape wrapping may have restricted diffusion.
 \end{enumerate}
 
 \subsection*{Recommendations for future spaceflight plant experiments}
 
-Based on these findings, we propose three concrete recommendations to unconfound enclosure atmosphere from microgravity in future orbital plant biology (Fig.~\ref{fig:ladder_implications} right):
+Based on these findings, we propose three concrete recommendations to unconfound enclosure atmosphere from microgravity in future orbital plant biology (Fig.~\ref{fig:ladder_implications}e--g):
 \begin{enumerate}
     \item \textbf{Mandatory in-canister environmental logging}: Every spaceflight growth container should log in-dish $\mathrm{CO_2}$, $\mathrm{O_2}$, relative humidity, and PAR at $\ge 1\,\mathrm{min}$ resolution. Without internal atmospheric data, investigators cannot determine whether transcriptional shifts reflect microgravity or enclosure carbon starvation.
     \item \textbf{Targeted 20-compound metabolomics profiling}: NASA and international flight programs should prioritize chemical profiling of archived and future spaceflight plant tissues, targeting the 20 central-carbon and photorespiratory compounds identified here (Fig.~\ref{fig:metabolome}) to close the complete plant metabolomics gap in OSDR.
-    \item \textbf{Three-arm and $2\times 2$ factorial experimental designs}: Future flight investigations should move beyond simple two-arm designs (flight vs.\ ground in identical sealed hardware) to three-arm designs (adding an open/vented ground control) or fully crossed $2\times 2$ designs ($\{\text{sealed, vented}\} \times \{\mu g, 1\,g\}$; Fig.~\ref{fig:ladder_implications}b) that explicitly unconfound enclosure atmosphere from microgravity.
+    \item \textbf{Three-arm and $2\times 2$ factorial experimental designs}: Future flight investigations should move beyond simple two-arm designs (flight vs.\ ground in identical sealed hardware) to three-arm designs (adding an open/vented ground control) or fully crossed $2\times 2$ designs ($\{\text{sealed, vented}\} \times \{\mu g, 1\,g\}$; Fig.~\ref{fig:ladder_implications}f) that explicitly unconfound enclosure atmosphere from microgravity.
 \end{enumerate}
 
 %=============================================================================

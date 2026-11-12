@@ -80,10 +80,11 @@ def panel_b(ax) -> None:
                 linestyle="--" if case == "open (ref)" else "-",
                 linewidth=2.0 if case == "VEGGIE vented" else 1.6,
                 zorder=3 if case == "VEGGIE vented" else 2)
-    ax.set_xlabel("elapsed time (s)")
+    ax.set_xlabel("elapsed time (s)", labelpad=4)
     ax.set_ylabel("leaf-surface CO$_2$ drop $C_s - C_a$\n($\\mu$mol mol$^{-1}$)")
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.27), ncol=3, handlelength=1.6,
-              fontsize=6.4, columnspacing=1.0, handletextpad=0.5, frameon=False)
+    # Position legend cleanly below axes with enough clearance from xlabel
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.36), ncol=3, handlelength=1.4,
+              fontsize=6.0, columnspacing=0.8, handletextpad=0.4, frameon=False)
 
 
 def panel_c(ax) -> None:
@@ -104,14 +105,19 @@ def panel_c(ax) -> None:
     ax.bar(x - width/2, vals_sat, width=width, color=[cols[e] for e in df["enclosure"]], label="Saturating (1000)")
     ax.bar(x + width/2, vals_dim, width=width, color=[cols[e] for e in df["enclosure"]], alpha=0.5, hatch="//", label="Exp. light (60)")
     
+    # Non-overlapping bar percentage labels: vertically staggered when close in height
     for i, (vs, vd) in enumerate(zip(vals_sat, vals_dim)):
-        ax.text(i - width/2, vs + 2.5, f"{vs:.0f}%", ha="center", fontsize=6.8, fontweight="bold")
-        ax.text(i + width/2, vd + 2.5, f"{vd:.0f}%", ha="center", fontsize=6.4)
+        if abs(vs - vd) < 8:
+            ax.text(i - width/2, vs + 2.0, f"{vs:.0f}%", ha="center", fontsize=6.6, fontweight="bold")
+            ax.text(i + width/2, vd + 8.5, f"{vd:.0f}%", ha="center", fontsize=6.2, color="#444444")
+        else:
+            ax.text(i - width/2, vs + 2.0, f"{vs:.0f}%", ha="center", fontsize=6.6, fontweight="bold")
+            ax.text(i + width/2, vd + 2.0, f"{vd:.0f}%", ha="center", fontsize=6.2, color="#444444")
         
     ax.set_xticks(x)
     ax.set_xticklabels(df["enclosure"])
     ax.set_ylabel("% of Earth control")
-    ax.set_ylim(0, 130)
+    ax.set_ylim(0, 132)
     ax.legend(loc="upper right", fontsize=6.2, frameon=False)
 
 

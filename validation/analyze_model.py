@@ -63,19 +63,17 @@ if HAVE_ANCHOR:
 def load_field(name):
     return np.loadtxt(f"{FLD}/{name}_h2o.csv", delimiter=",")
 
-fields = [("leaf-earth", "Single leaf — Earth 1 g"),
-          ("leaf-ug", "Single leaf — microgravity"),
-          ("canopy-ug", "Microgreen canopy — microgravity")]
+fields = [("leaf-earth", "a  Single leaf — Earth 1 g"),
+          ("leaf-ug", "b  Single leaf — microgravity"),
+          ("canopy-ug", "c  Microgreen canopy — microgravity")]
 vmax = max(np.nanmax(load_field(n)) for n, _ in fields)
 cmap = plt.get_cmap("viridis").copy(); cmap.set_bad("#282c34")
 fig, axs = plt.subplots(1, 3, figsize=(12, 3.6))
 for ax, (name, title) in zip(axs, fields):
     g = load_field(name)
     im = ax.imshow(g, cmap=cmap, vmin=0, vmax=vmax, aspect="equal")
-    ax.set_title(title, fontsize=10); ax.set_xticks([]); ax.set_yticks([])
+    ax.set_title(title, loc="left", fontweight="bold", fontsize=10); ax.set_xticks([]); ax.set_yticks([])
 fig.colorbar(im, ax=axs, fraction=0.02, pad=0.02, label="H$_2$O excess (model units)")
-fig.suptitle("Water-vapour boundary layer: buoyant plume on Earth vs. stagnant halo in microgravity",
-             fontsize=11)
 fig.savefig(f"{FIG}/F3_plume_maps.png", dpi=130, bbox_inches="tight")
 plt.close(fig)
 
@@ -92,7 +90,8 @@ fig, (a1, a2) = plt.subplots(1, 2, figsize=(11, 4.2))
 a1.plot(gr, dCw, "o-", color="#2a7de1", label="ΔC H$_2$O")
 a1.plot(gr, dCc, "s-", color="#e0654e", label="|ΔC CO$_2$|")
 a1.set_xlabel("gravity (g / g$_{Earth}$)"); a1.set_ylabel("surface gap ΔC (mean, model units)")
-a1.set_title("Single-leaf gravity sweep"); a1.grid(alpha=0.25); a1.legend(loc="upper center")
+a1.set_title("a  Single-leaf gravity sweep", loc="left", fontweight="bold", fontsize=10.5, pad=8)
+a1.grid(alpha=0.25); a1.legend(loc="upper right", frameon=False)
 a1b = a1.twinx(); a1b.plot(gr, umax, "^--", color="#2fbf71", alpha=0.7)
 a1b.set_ylabel("u$_{max}$ convection (green)", color="#2fbf71")
 
@@ -105,8 +104,9 @@ a2.bar(x - w, earth, w, label="Earth 1 g", color="#2a7de1")
 a2.bar(x, ug, w, label="µg (mean)", color="#8a5cf6")
 a2.bar(x + w, peak_ug, w, label="µg (peak)", color="#e0654e")
 a2.set_xticks(x); a2.set_xticklabels(["leaf", "rosette", "canopy"])
-a2.set_ylabel("ΔC H$_2$O (model units)"); a2.set_title("Scale amplification & microgravity penalty")
-a2.grid(alpha=0.25, axis="y"); a2.legend()
+a2.set_ylabel("ΔC H$_2$O (model units)")
+a2.set_title("b  Scale amplification & microgravity penalty", loc="left", fontweight="bold", fontsize=10.5, pad=8)
+a2.grid(alpha=0.25, axis="y"); a2.legend(frameon=False)
 fig.tight_layout(); fig.savefig(f"{FIG}/F4_gravity_scale.png", dpi=130)
 plt.close(fig)
 
@@ -118,16 +118,16 @@ fig, (b1, b2) = plt.subplots(1, 2, figsize=(11, 4.2))
 b1.plot(ch.step / 1e3, ch.total_mass, color="#2a7de1", lw=2.5, label="model total mass")
 b1.plot(ch.step / 1e3, ch.expected_total, "k--", lw=1.2, label="imposed flux × t (exact)")
 b1.set_xlabel("step (×10³)"); b1.set_ylabel("total gas (model units)")
-b1.set_title(f"Closed-chamber accumulation — mass conserved (err {cons_err:.0e})")
-b1.grid(alpha=0.25); b1.legend()
+b1.set_title(f"a  Mass conservation (err {cons_err:.0e})", loc="left", fontweight="bold", fontsize=10.5, pad=8)
+b1.grid(alpha=0.25); b1.legend(frameon=False)
 # Near-leaf (source) vs far-wall (bulk): the persistent surface-to-bulk gap —
 # the boundary layer at chamber scale, and the quantity gravity modulates.
 b2.plot(ch.step / 1e3, ch.centre_conc, color="#e0654e", lw=2, label="near-leaf (source)")
 b2.plot(ch.step / 1e3, ch.corner_conc, color="#2fbf71", lw=2, label="far wall (bulk)")
 b2.fill_between(ch.step / 1e3, ch.corner_conc, ch.centre_conc, color="#e0654e", alpha=0.12)
 b2.set_xlabel("step (×10³)"); b2.set_ylabel("concentration (model units)")
-b2.set_title("Sustained surface-to-bulk gap (boundary layer)")
-b2.grid(alpha=0.25); b2.legend()
+b2.set_title("b  Sustained surface-to-bulk gap (boundary layer)", loc="left", fontweight="bold", fontsize=10.5, pad=8)
+b2.grid(alpha=0.25); b2.legend(frameon=False)
 fig.tight_layout(); fig.savefig(f"{FIG}/F5_chamber_validation.png", dpi=130)
 plt.close(fig)
 

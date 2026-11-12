@@ -54,18 +54,20 @@ for s in SCALES:
     a1.axhline(earth, color=SCOL[s], ls="--", lw=1, alpha=0.7)
     if not np.isnan(xc):
         a1.plot([xc], [earth], "*", color=SCOL[s], ms=15, mec="k", mew=0.5)
-a1.set_xlabel("forced airflow (cm/s)"); a1.set_ylabel("leaf-surface ΔC H$_2$O (mean, model units)")
-a1.set_title("Forced ventilation in µg by plant scale\n(dashed = Earth-1 g level; ★ = Earth-equivalent; hollow = Ma > 0.3, not used)")
-a1.grid(alpha=0.25); a1.legend(title="scale")
+a1.set_xlabel("forced airflow (cm/s)")
+a1.set_ylabel("leaf-surface ΔC H$_2$O (mean, model units)")
+a1.set_title("a  Forced ventilation in µg by plant scale", loc="left", fontweight="bold", fontsize=10.5, pad=8)
+a1.grid(alpha=0.25)
+a1.legend(loc="upper right", frameon=False, fontsize=8.5)
 
 sv = [speeds[s] for s in SCALES]
 a2.bar(range(3), [0 if np.isnan(v) else v for v in sv], color=[SCOL[s] for s in SCALES])
 for i, (s, v) in enumerate(zip(SCALES, sv)):
     lab = f"{v:.1f}" if not np.isnan(v) else f"not reached\n≤ {valid_to[s]:.1f} cm/s"
-    a2.text(i, (0 if np.isnan(v) else v) + 0.3, lab, ha="center", va="bottom", fontsize=9, fontweight="bold")
+    a2.text(i, (0 if np.isnan(v) else v) + 0.3, lab, ha="center", va="bottom", fontsize=8.5, fontweight="bold")
 a2.set_xticks(range(3)); a2.set_xticklabels(SCALES)
 a2.set_ylabel("Earth-equivalent airflow (cm/s)")
-a2.set_title("Earth-equivalent airflow\n(within the solver's valid range)")
+a2.set_title("b  Earth-equivalent airflow", loc="left", fontweight="bold", fontsize=10.5, pad=8)
 a2.set_ylim(0, max([v for v in sv if not np.isnan(v)] + [1]) * 1.6)
 a2.grid(alpha=0.25, axis="y")
 fig.tight_layout(); fig.savefig(f"{FIG}/F8_fan_by_scale.png", dpi=130)

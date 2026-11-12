@@ -126,7 +126,7 @@ Querying all 567 studies in NASA OSDR (`T03_osdr_metabolomics_census.tsv`) revea
 
 ### 2.7. Testing against OSD-522 (BRIC-LED): 8 of 9 transcriptome gene-set calls matched while ER UPR dominates globally
 
-Testing against OSD-522 shoot RNA-seq ($1,795$ DEGs at $\mathrm{FDR}<0.05$ out of $19,325$ tested loci; `T01`) and TMT proteomics ($5,160$ proteins; `T02`) confirmed **8 of 9 directional predictions in the transcriptome** and **4 of 7 in the proteome** (**Figure 8**, `fig04_osd522_omics.pdf`, `fig05_blind_test.pdf`, **Table 4**). In set-versus-set contrasts immune to global plastid depression, core photorespiratory enzymes sat significantly above Rubisco in both the transcriptome ($+0.239\,\log_2\mathrm{FC}, p = 6.8\times 10^{-3}$) and proteome ($+0.285\,\log_2\mathrm{FC}, p = 4.9\times 10^{-2}$), and *DIN* starvation markers sat $+0.923\,\log_2\mathrm{FC}$ above the photosynthetic apparatus ($p = 5.3\times 10^{-6}$).
+Testing against OSD-522 shoot RNA-seq ($1,795$ DEGs at $\mathrm{FDR}<0.05$ out of $19,325$ tested loci; `T01`) and TMT proteomics ($5,160$ proteins; `T02`) confirmed **8 of 9 directional predictions in the transcriptome** and **4 of 7 in the proteome** (**Figure 9**, `fig09_osd522_falsification.pdf`, **Table 4**). In set-versus-set contrasts immune to global plastid depression, core photorespiratory enzymes sat significantly above Rubisco in both the transcriptome ($+0.239\,\log_2\mathrm{FC}, p = 6.8\times 10^{-3}$) and proteome ($+0.285\,\log_2\mathrm{FC}, p = 4.9\times 10^{-2}$), and *DIN* starvation markers sat $+0.923\,\log_2\mathrm{FC}$ above the photosynthetic apparatus ($p = 5.3\times 10^{-6}$).
 
 **Table 4. OSD-522 (BRIC-LED) multi-omics falsification scorecard (`T07_falsification_osd522.tsv`).**
 
@@ -150,7 +150,7 @@ In PaintOmics 4 across 232 KEGG and MapMan pathways (**Figure 9**, `fig06_painto
 
 ### 2.8. Cross-study evaluation across five OSDR spaceflight experiments: illumination separates all six flight contrasts
 
-Across all five OSDR studies (six matched flight-versus-ground contrasts) meeting our inclusion criteria (**Table 5**, **Figure 10**, `fig07_hardware_ladder.pdf`, `fig08_implications.pdf`, `T11`, `T12`), illumination separated every lit study ($+0.41$ OSD-427 VEGGIE, $+0.92$ OSD-522 BRIC-LED, $+2.58$ OSD-678 CARA lit) from every dark study ($-0.39$ OSD-38, $-1.95$ OSD-321, $-3.22$ OSD-678 CARA dark; one-sided Mann–Whitney $p = 0.05$) on the starvation-over-photosynthesis axis, whereas enclosure class alone among the three lit studies did not follow a monotonic ranking ($\rho = -0.50, p = 0.67$).
+Across all five OSDR studies (six matched flight-versus-ground contrasts) meeting our inclusion criteria (**Table 5**, **Figure 10**, `fig10_hardware_ladder_implications.pdf`, `T11`, `T12`), illumination separated every lit study ($+0.41$ OSD-427 VEGGIE, $+0.92$ OSD-522 BRIC-LED, $+2.58$ OSD-678 CARA lit) from every dark study ($-0.39$ OSD-38, $-1.95$ OSD-321, $-3.22$ OSD-678 CARA dark; one-sided Mann–Whitney $p = 0.05$) on the starvation-over-photosynthesis axis, whereas enclosure class alone among the three lit studies did not follow a monotonic ranking ($\rho = -0.50, p = 0.67$).
 
 **Table 5. NASA OSDR spaceflight studies evaluated in the cross-study hardware and illumination ladder (`data/study_registry.tsv`).**
 
