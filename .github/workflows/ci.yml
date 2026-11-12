@@ -30,9 +30,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Run FvCB self-checks, JS/Python parity, site data & manifest verification
+      - name: Run FvCB self-checks, JS/Python parity, site data, manifest & ABAI QC verification
         run: |
           python3 scripts/fvcb.py
           python3 scripts/check_js_parity.py
           python3 scripts/check_site_data.py
           python3 scripts/make_manifest.py
+          python3 scripts/abai_check.py

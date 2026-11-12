@@ -25,7 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def audit_latex_build() -> list[str]:
     issues = []
     ms_dir = ROOT / "manuscript"
-    for base in ["main", "supplementary"]:
+    for base in ["main", "supplementary", "npj_main"]:
         pdf = ms_dir / f"{base}.pdf"
         log = ms_dir / f"{base}.log"
         if not pdf.exists():

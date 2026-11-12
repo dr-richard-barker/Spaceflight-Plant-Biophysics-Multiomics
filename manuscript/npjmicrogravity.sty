@@ -1,0 +1,93 @@
+%% npjmicrogravity.sty
+%% LaTeX style package mimicking the publication layout of npj Microgravity (Springer Nature)
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{npjmicrogravity}[2026/11/11 v1.0 npj Microgravity Article Styling]
+
+\RequirePackage[a4paper,top=22mm,bottom=22mm,left=15mm,right=15mm,columnsep=6.5mm,headheight=14pt,headsep=6mm,footskip=12mm]{geometry}
+\RequirePackage[scaled=0.92]{helvet}
+\RequirePackage{newtxtext,newtxmath}
+\RequirePackage{microtype}
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{booktabs}
+\RequirePackage{amsmath}
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+\RequirePackage{caption}
+\RequirePackage{tcolorbox}
+\RequirePackage{tabularx}
+\RequirePackage{hyperref}
+\RequirePackage{orcidlink}
+\RequirePackage[super,sort&compress,comma]{natbib}
+
+% Nature / npj Brand Colors
+\definecolor{npjteal}{HTML}{00828a}
+\definecolor{npjdark}{HTML}{111827}
+\definecolor{npjgray}{HTML}{5a6578}
+\definecolor{npjgold}{HTML}{b45309}
+\definecolor{npjline}{HTML}{e2e8f0}
+\definecolor{npjlink}{HTML}{006699}
+\definecolor{npjlgtgray}{HTML}{f3f4f6}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=npjlink,
+  citecolor=npjlink,
+  urlcolor=npjlink
+}
+
+% Running header and footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[RO]{\footnotesize\sffamily\color{npjgray} npj Microgravity (2026) 12:42}
+\fancyhead[LO]{\footnotesize\sffamily\color{npjgray} R. J. Barker et al.}
+\fancyhead[LE]{\footnotesize\sffamily\color{npjgray} npj Microgravity (2026) 12:42}
+\fancyhead[RE]{\footnotesize\sffamily\color{npjgray} R. J. Barker et al.}
+\fancyfoot[C]{\footnotesize\sffamily\color{npjgray} Published in cooperation with the Biodesign Institute at Arizona State University, with the support of NASA}
+\fancyfoot[RO,LE]{\bfseries\sffamily\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Section Titles (Nature Portfolio all-caps sans-serif style)
+\titleformat{\section}{\sffamily\bfseries\normalsize\color{npjdark}}{\thesection}{0.8em}{\MakeUppercase}
+\titleformat{\subsection}{\sffamily\bfseries\small\color{npjdark}}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\sffamily\bfseries\itshape\footnotesize\color{npjdark}}{\thesubsubsection}{0.8em}{}
+\titlespacing*{\section}{0pt}{14pt plus 2pt minus 2pt}{6pt plus 1pt minus 1pt}
+\titlespacing*{\subsection}{0pt}{10pt plus 2pt minus 2pt}{4pt plus 1pt minus 1pt}
+\titlespacing*{\subsubsection}{0pt}{8pt plus 2pt minus 2pt}{3pt plus 1pt minus 1pt}
+
+% Captions (Nature style: Fig. 1 | Bold Title. Text)
+\captionsetup{
+  font={small},
+  labelfont={bf,sf},
+  labelsep=quad,
+  figurename=Fig.,
+  tablename=Table
+}
+
+% Banner on page 1
+\newcommand{\npjbanner}[1]{%
+  \thispagestyle{plain}%
+  \fancyfoot[C]{\footnotesize\sffamily\color{npjgray} Published in cooperation with the Biodesign Institute at Arizona State University, with the support of NASA}%
+  \fancyfoot[RO,LE]{\bfseries\sffamily\thepage}%
+  \begin{minipage}{\textwidth}
+    \vspace*{-12mm}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lr}
+      {\footnotesize\sffamily\color{npjlink}\url{www.nature.com/npjmgrav}} & 
+      {\Large\sffamily\bfseries npj \hspace{1pt}\textcolor{npjteal}{\rule[-2pt]{1.4pt}{12pt}}\hspace{3pt}\textit{microgravity}} \\
+    \end{tabular*}
+    \vspace{2pt}\hrule height 1.2pt\vspace{5pt}
+    \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}lr}
+      \begin{tabular}{@{}lll@{}}
+        \colorbox{npjteal}{\color{white}\bfseries\sffamily\footnotesize\strut ARTICLE} & 
+        \colorbox{npjgold}{\color{white}\bfseries\sffamily\footnotesize\strut OPEN} & 
+        \colorbox{npjlgtgray}{\bfseries\sffamily\footnotesize\strut\textcolor{npjdark}{Check for updates}}
+      \end{tabular} & 
+      {\footnotesize\sffamily\color{npjgray} npj Microgravity (2026) 12:42 ; \url{#1}}
+    \end{tabular*}
+    \vspace{4pt}\hrule height 0.4pt\vspace{10pt}
+  \end{minipage}
+}
+
+% End of package
+\endinput
