@@ -3,29 +3,208 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (function(){
+        try {
+          var t = localStorage.getItem("barker.theme") || localStorage.getItem("color-scheme");
+          if (!t) {
+            t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.setAttribute("data-theme", t);
+          var meta = document.querySelector('meta[name="color-scheme"]');
+          if (meta) meta.content = t;
+        } catch(e){}
+      })();
+    </script>
     <title>LunarLeaf-CFD · M1 Solver Bench</title>
-    <link rel="icon" href="/cose/cose-logo.png" />
-    <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-chrome.css" />
-    <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-map.css" />
+    <link rel="icon" href="cose/cose-logo.png" />
+    <link rel="stylesheet" href="cose/cose-chrome.css" />
+    <link rel="stylesheet" href="cose/cose-map.css" />
+    <link rel="stylesheet" href="cose/cose-theme.css" />
+    <style>
+      :root {
+        --portal-bg: #f8fafc;
+        --portal-fg: #0f172a;
+        --portal-border: #e2e8f0;
+        --portal-link: #334155;
+        --portal-link-hover: #0284c7;
+        --portal-btn-bg: #ffffff;
+        --portal-btn-fg: #0f172a;
+        --portal-btn-border: #cbd5e1;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --portal-bg: #0d131d;
+          --portal-fg: #f8fafc;
+          --portal-border: #1e293b;
+          --portal-link: #cbd5e1;
+          --portal-link-hover: #38bdf8;
+          --portal-btn-bg: #16202e;
+          --portal-btn-fg: #f8fafc;
+          --portal-btn-border: #2d3e55;
+        }
+      }
+      html[data-theme="light"] {
+        --portal-bg: #f8fafc;
+        --portal-fg: #0f172a;
+        --portal-border: #e2e8f0;
+        --portal-link: #334155;
+        --portal-link-hover: #0284c7;
+        --portal-btn-bg: #ffffff;
+        --portal-btn-fg: #0f172a;
+        --portal-btn-border: #cbd5e1;
+      }
+      html[data-theme="dark"] {
+        --portal-bg: #0d131d;
+        --portal-fg: #f8fafc;
+        --portal-border: #1e293b;
+        --portal-link: #cbd5e1;
+        --portal-link-hover: #38bdf8;
+        --portal-btn-bg: #16202e;
+        --portal-btn-fg: #f8fafc;
+        --portal-btn-border: #2d3e55;
+      }
+      .portal-bar {
+        background: var(--portal-bg);
+        color: var(--portal-fg);
+        padding: 10px 20px 10px 96px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13.5px;
+        border-bottom: 1px solid var(--portal-border);
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      @media (max-width: 680px) {
+        .portal-bar { padding-left: 84px; }
+      }
+      .portal-nav {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .portal-brand {
+        color: var(--accent2, #0d9488);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .portal-sep {
+        color: var(--portal-border);
+        user-select: none;
+      }
+      .portal-link {
+        color: var(--portal-link);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color .15s;
+      }
+      .portal-link:hover {
+        color: var(--portal-link-hover);
+        text-decoration: none;
+      }
+      .portal-link.active {
+        font-weight: 700;
+        color: var(--accent2, #0d9488);
+        border-bottom: 2px solid var(--accent2, #0d9488);
+        padding-bottom: 2px;
+      }
+      .portal-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .btn-pill {
+        background: var(--portal-btn-bg);
+        color: var(--portal-btn-fg);
+        border: 1px solid var(--portal-btn-border);
+        padding: 6px 13px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all .15s;
+      }
+      .btn-pill:hover {
+        border-color: var(--accent2, #0d9488);
+        color: var(--accent2, #0d9488);
+        text-decoration: none;
+      }
+      .btn-pill.primary {
+        background: var(--accent2, #0d9488);
+        color: #ffffff;
+        border-color: var(--accent2, #0d9488);
+      }
+      .btn-pill.primary:hover {
+        filter: brightness(1.1);
+        color: #ffffff;
+      }
+      .cose-ms-card {
+        max-width: 1100px;
+        margin: 1.4rem auto;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 1.4rem 1.8rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .cose-ms-title {
+        margin: 4px 0 8px;
+        font-size: 1.15rem;
+        line-height: 1.35;
+        color: var(--fg);
+      }
+      .cose-ms-title a {
+        color: var(--fg);
+        text-decoration: none;
+      }
+      .cose-ms-title a:hover {
+        color: var(--accent);
+      }
+      .cose-ms-desc {
+        margin: 0 0 10px;
+        font-size: 0.88rem;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+    </style>
 </head>
   <body data-site-id="LunarLeaf-CFD" data-brand-logo="cose/cose-logo.png">
-<div style="background:#0d131d;color:#fff;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;border-bottom:1px solid #1f2937;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;flex-wrap:wrap;gap:10px;">
-  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-    <strong style="color:#2dd4bf;display:flex;align-items:center;gap:6px;">🌱 npj Microgravity | Spaceflight Plant Biophysics</strong>
-    <span style="color:#4b5563;">|</span>
-    <a href="paper.html" style="color:#d1d5db;text-decoration:none;font-weight:600;">📄 Manuscript (npj Microgravity PDF &amp; Article)</a>
-    <span style="color:#4b5563;">|</span>
-    <a href="explorer/" style="color:#d1d5db;text-decoration:none;">🔬 Interactive FvCB &amp; Multi-Omics Explorer</a>
-    <span style="color:#4b5563;">|</span>
-    <span style="color:#2dd4bf;font-weight:700;border-bottom:2px solid #2dd4bf;padding-bottom:2px;">🌊 Live 2-D LBM CFD Workbench</span>
-    <span style="color:#4b5563;">|</span>
-    <a href="https://github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics" target="_blank" style="color:#d1d5db;text-decoration:none;">📦 GitHub &amp; Zenodo</a>
-  </div>
-  <div style="display:flex;gap:10px;align-items:center;">
-    <a href="Spaceflight_Biophysics_Multiomics_npj.pdf" download style="background:#2dd4bf;color:#0b131a;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:700;text-decoration:none;">📥 Download npj PDF</a>
-    <a href="paper.html#pdf" style="background:#1e293b;color:#f3f4f6;border:1px solid #334155;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:600;text-decoration:none;">📖 Read in Browser</a>
-  </div>
-</div>
+    <div class="portal-bar">
+      <div class="portal-nav">
+        <span class="portal-brand">🌱 npj Microgravity | Spaceflight Plant Biophysics</span>
+        <span class="portal-sep">|</span>
+        <a href="paper.html" class="portal-link">📄 Manuscript (npj Microgravity PDF &amp; Article)</a>
+        <span class="portal-sep">|</span>
+        <a href="explorer/" class="portal-link">🔬 Interactive FvCB &amp; Multi-Omics Explorer</a>
+        <span class="portal-sep">|</span>
+        <span class="portal-link active">🌊 Live 2-D LBM CFD Workbench</span>
+        <span class="portal-sep">|</span>
+        <a href="https://github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics" target="_blank" class="portal-link">📦 GitHub &amp; Zenodo</a>
+      </div>
+      <div class="portal-actions">
+        <button id="theme-toggle" class="btn-pill theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle light or dark theme" title="Toggle light / dark mode">
+          <span class="theme-icon">🌙</span>
+          <span class="theme-label">Theme</span>
+        </button>
+        <a href="Spaceflight_Biophysics_Multiomics_npj.pdf" download class="btn-pill primary">📥 Download npj PDF</a>
+        <a href="paper.html#pdf" class="btn-pill">📖 Read in Browser</a>
+      </div>
+    </div>
 
     <header class="cose-hero">
       <p class="cose-eyebrow">AstroBotany / AIRI · Lunar Leaf</p>
@@ -44,35 +223,35 @@
     </header>
 
     <!-- Featured Manuscript Showcase Card (npj Microgravity) -->
-    <div style="max-width:1100px;margin:1.4rem auto;background:#151c27;border:1px solid #273549;border-radius:14px;padding:1.4rem 1.8rem;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+    <div class="cose-ms-card">
       <div style="flex:0 0 120px;text-align:center;">
         <a href="paper.html#pdf" title="Read npj Microgravity Manuscript">
-          <img src="figures/npj_manuscript_p1.png" alt="npj Microgravity Manuscript Preview" style="width:120px;border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,0.5);border:1px solid #374151;transition:transform .15s ease;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'" />
+          <img src="figures/npj_manuscript_p1.png" alt="npj Microgravity Manuscript Preview" style="width:120px;border-radius:6px;box-shadow:0 4px 10px rgba(0,0,0,0.25);border:1px solid var(--border);transition:transform .15s ease;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'" />
         </a>
-        <span style="display:block;font-size:11px;color:#94a3b8;margin-top:6px;font-weight:600;">16 Pages · PDF</span>
+        <span style="display:block;font-size:11px;color:var(--muted);margin-top:6px;font-weight:600;">16 Pages · PDF</span>
       </div>
       <div style="flex:1;min-width:280px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
           <span style="background:#00828a;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:0.04em;">ARTICLE</span>
           <span style="background:#b45309;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:0.04em;">OPEN ACCESS</span>
-          <strong style="color:#2dd4bf;font-size:13px;">npj Microgravity (2026) 12:42</strong>
-          <span style="color:#64748b;">&middot;</span>
-          <a href="https://doi.org/10.1038/s41526-026-00412-x" target="_blank" style="color:#38bdf8;font-size:12px;text-decoration:none;">doi:10.1038/s41526-026-00412-x</a>
+          <strong style="color:var(--accent2);font-size:13px;">npj Microgravity (2026) 12:42</strong>
+          <span style="color:var(--muted);">&middot;</span>
+          <a href="https://doi.org/10.1038/s41526-026-00412-x" target="_blank" style="color:var(--accent);font-size:12px;text-decoration:none;">doi:10.1038/s41526-026-00412-x</a>
         </div>
-        <h3 style="margin:4px 0 8px;font-size:1.15rem;line-height:1.35;color:#f8fafc;">
-          <a href="paper.html" style="color:#f8fafc;text-decoration:none;">From microgravity boundary-layer biophysics to the spaceflight multi-ome: a coupled lattice-Boltzmann and Farquhar–von Caemmerer–Berry model of <em>Arabidopsis</em> gas exchange and enclosure carbon starvation</a>
+        <h3 class="cose-ms-title">
+          <a href="paper.html">From microgravity boundary-layer biophysics to the spaceflight multi-ome: a coupled lattice-Boltzmann and Farquhar–von Caemmerer–Berry model of <em>Arabidopsis</em> gas exchange and enclosure carbon starvation</a>
         </h3>
-        <p style="margin:0 0 10px;font-size:0.86rem;color:#94a3b8;line-height:1.5;">
+        <p class="cose-ms-desc">
           Unstirred leaf boundary layers thicken 2.0–2.3× in microgravity, but sealed flight canisters exhaust CO₂ in ~7 minutes, creating a 22× larger starvation effect that cancels symmetrically out of standard flight-vs-ground contrasts.
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <a href="paper.html#pdf" style="background:#2dd4bf;color:#0b131a;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+          <a href="paper.html#pdf" class="btn-pill primary">
             📄 Read npj PDF in Browser &rarr;
           </a>
-          <a href="Spaceflight_Biophysics_Multiomics_npj.pdf" download style="background:#1e293b;color:#f1f5f9;border:1px solid #334155;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+          <a href="Spaceflight_Biophysics_Multiomics_npj.pdf" download class="btn-pill">
             📥 Download PDF (16 pp, 1.0 MB)
           </a>
-          <a href="explorer/" style="background:#1e293b;color:#f1f5f9;border:1px solid #334155;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+          <a href="explorer/" class="btn-pill">
             🔬 Interactive Omics Explorer &rarr;
           </a>
         </div>
@@ -81,8 +260,46 @@
     <div id="root"></div>
 
     <script type="module" src="/src/main.tsx"></script>
-    <script src="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/sites.js"></script>
-    <script src="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/theme.js"></script>
+    <script>
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme') || 
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+      }
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        try {
+          localStorage.setItem('barker.theme', theme);
+          localStorage.setItem('color-scheme', theme);
+        } catch(e){}
+        const meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) meta.content = theme;
+        document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+          const icon = btn.querySelector('.theme-icon');
+          const label = btn.querySelector('.theme-label');
+          if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+          if (label) label.textContent = theme === 'dark' ? 'Light' : 'Dark';
+          btn.setAttribute('title', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+        });
+        const coseBtn = document.querySelector('.cose-theme-btn');
+        if (coseBtn) {
+          coseBtn.setAttribute('title', theme === 'dark' ? 'Switch to light' : 'Switch to dark');
+        }
+      }
+      window.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('barker.theme') || localStorage.getItem('color-scheme') ||
+          (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        applyTheme(savedTheme);
+      });
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'barker.theme' || e.key === 'color-scheme') {
+          if (e.newValue) applyTheme(e.newValue);
+        }
+      });
+    </script>
+    <script src="cose/sites.js"></script>
+    <script src="cose/theme.js"></script>
     <script defer src="https://visitor-analytics.astrobotany.workers.dev/a.js"></script>
 </body>
 </html>

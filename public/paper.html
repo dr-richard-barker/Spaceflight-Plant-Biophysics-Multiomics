@@ -3,44 +3,172 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <script>
+    (function(){
+      try {
+        var t = localStorage.getItem("barker.theme") || localStorage.getItem("color-scheme");
+        if (!t) {
+          t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+        var meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) meta.content = t;
+      } catch(e){}
+    })();
+  </script>
   <title>npj Microgravity · Spaceflight Plant Biophysics &amp; Multi-Omics</title>
   <meta name="description" content="From microgravity boundary-layer biophysics to the spaceflight multi-ome: a coupled lattice-Boltzmann CFD and Farquhar–von Caemmerer–Berry model of Arabidopsis gas exchange and enclosure carbon starvation across NASA OSDR." />
   <link rel="icon" href="cose/cose-logo.png" />
-  <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-chrome.css" />
-  <link rel="stylesheet" href="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/cose-map.css" />
+  <link rel="stylesheet" href="cose/cose-chrome.css" />
+  <link rel="stylesheet" href="cose/cose-map.css" />
+  <link rel="stylesheet" href="cose/cose-theme.css" />
   <style>
+    /* ========================================================================
+       COSE & npj Microgravity Dual High-Contrast Color Scheme
+       ======================================================================== */
     :root {
+      color-scheme: light dark;
+
+      /* CoSE High-Contrast Light Mode (Default) */
       --bg: #ffffff;
-      --fg: #111827;
-      --muted: #4b5563;
-      --line: #e5e7eb;
-      --card: #f9fafb;
-      --card-border: #e2e8f0;
+      --fg: #0f172a;           /* Slate-900: 15.4:1 contrast on white */
+      --muted: #334155;        /* Slate-700: 9.3:1 contrast on white (WCAG AAA) */
+      --faint: #64748b;        /* Slate-500: 4.6:1 contrast (WCAG AA) */
+      --line: #e2e8f0;         /* Slate-200 */
+      --card: #f8fafc;         /* Slate-50 */
+      --card-border: #cbd5e1;  /* Slate-300: crisp bounding edges */
+      --code-bg: #f1f5f9;      /* Slate-100 */
+
+      /* npj Microgravity Brand Tokens */
       --npj-teal: #00828a;
       --npj-teal-light: #e6f6f7;
-      --npj-dark: #111827;
+      --npj-teal-badge-fg: #ffffff;
+      --npj-dark: #0f172a;
       --npj-gold: #b45309;
       --npj-gold-light: #fef3c7;
-      --npj-blue: #006699;
-      --shadow-sm: 0 1px 2px 0 rgba(0,0,0,0.05);
-      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+      --npj-gold-badge-fg: #ffffff;
+      --npj-blue: #0284c7;
+
+      /* Universal Portal Navigation Bar */
+      --portal-bg: #f8fafc;
+      --portal-fg: #0f172a;
+      --portal-border: #e2e8f0;
+      --portal-link: #334155;
+      --portal-link-hover: #0284c7;
+      --portal-btn-bg: #ffffff;
+      --portal-btn-fg: #0f172a;
+      --portal-btn-border: #cbd5e1;
+
+      --shadow-sm: 0 1px 3px 0 rgba(15,23,42,0.08);
+      --shadow-md: 0 4px 6px -1px rgba(15,23,42,0.1), 0 2px 4px -2px rgba(15,23,42,0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(15,23,42,0.1), 0 4px 6px -4px rgba(15,23,42,0.05);
     }
+
     @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f141c;
-        --fg: #f3f4f6;
-        --muted: #9ca3af;
-        --line: #263140;
-        --card: #161e29;
-        --card-border: #2d3b4d;
-        --npj-teal: #2dd4bf;
-        --npj-teal-light: #132e35;
-        --npj-gold: #f59e0b;
-        --npj-gold-light: #362811;
-        --npj-blue: #38bdf8;
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+
+        /* CoSE High-Contrast Dark Mode */
+        --bg: #0b0f17;           /* Deep Space Navy */
+        --fg: #f8fafc;           /* Slate-50: 15.8:1 contrast on dark */
+        --muted: #cbd5e1;        /* Slate-300: 10.5:1 contrast on dark (WCAG AAA) */
+        --faint: #94a3b8;        /* Slate-400: 5.8:1 contrast (WCAG AA) */
+        --line: #233145;
+        --card: #131b26;         /* Elevated Space Panel */
+        --card-border: #233145;  /* Subtle crisp separator */
+        --code-bg: #16202e;
+
+        --npj-teal: #2dd4bf;     /* Luminous Teal: 10.2:1 contrast */
+        --npj-teal-light: #133336;
+        --npj-teal-badge-fg: #042f2e;
+        --npj-gold: #fbbf24;     /* Luminous Amber: 11.4:1 contrast */
+        --npj-gold-light: #3b2d11;
+        --npj-gold-badge-fg: #451a03;
+        --npj-blue: #38bdf8;     /* Luminous Sky Blue: 9.1:1 contrast */
+
+        --portal-bg: #0d131d;
+        --portal-fg: #f8fafc;
+        --portal-border: #1e293b;
+        --portal-link: #cbd5e1;
+        --portal-link-hover: #38bdf8;
+        --portal-btn-bg: #16202e;
+        --portal-btn-fg: #f8fafc;
+        --portal-btn-border: #2d3e55;
+
+        --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.3);
+        --shadow-md: 0 4px 8px -1px rgba(0,0,0,0.4);
+        --shadow-lg: 0 10px 20px -3px rgba(0,0,0,0.5);
       }
     }
+
+    html[data-theme="light"] {
+      color-scheme: light;
+      --bg: #ffffff;
+      --fg: #0f172a;
+      --muted: #334155;
+      --faint: #64748b;
+      --line: #e2e8f0;
+      --card: #f8fafc;
+      --card-border: #cbd5e1;
+      --code-bg: #f1f5f9;
+
+      --npj-teal: #00828a;
+      --npj-teal-light: #e6f6f7;
+      --npj-teal-badge-fg: #ffffff;
+      --npj-dark: #0f172a;
+      --npj-gold: #b45309;
+      --npj-gold-light: #fef3c7;
+      --npj-gold-badge-fg: #ffffff;
+      --npj-blue: #0284c7;
+
+      --portal-bg: #f8fafc;
+      --portal-fg: #0f172a;
+      --portal-border: #e2e8f0;
+      --portal-link: #334155;
+      --portal-link-hover: #0284c7;
+      --portal-btn-bg: #ffffff;
+      --portal-btn-fg: #0f172a;
+      --portal-btn-border: #cbd5e1;
+
+      --shadow-sm: 0 1px 3px 0 rgba(15,23,42,0.08);
+      --shadow-md: 0 4px 6px -1px rgba(15,23,42,0.1), 0 2px 4px -2px rgba(15,23,42,0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(15,23,42,0.1), 0 4px 6px -4px rgba(15,23,42,0.05);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #0b0f17;
+      --fg: #f8fafc;
+      --muted: #cbd5e1;
+      --faint: #94a3b8;
+      --line: #233145;
+      --card: #131b26;
+      --card-border: #233145;
+      --code-bg: #16202e;
+
+      --npj-teal: #2dd4bf;
+      --npj-teal-light: #133336;
+      --npj-teal-badge-fg: #042f2e;
+      --npj-gold: #fbbf24;
+      --npj-gold-light: #3b2d11;
+      --npj-gold-badge-fg: #451a03;
+      --npj-blue: #38bdf8;
+
+      --portal-bg: #0d131d;
+      --portal-fg: #f8fafc;
+      --portal-border: #1e293b;
+      --portal-link: #cbd5e1;
+      --portal-link-hover: #38bdf8;
+      --portal-btn-bg: #16202e;
+      --portal-btn-fg: #f8fafc;
+      --portal-btn-border: #2d3e55;
+
+      --shadow-sm: 0 1px 3px 0 rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 8px -1px rgba(0,0,0,0.4);
+      --shadow-lg: 0 10px 20px -3px rgba(0,0,0,0.5);
+    }
+
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; }
     body {
@@ -48,30 +176,35 @@
       color: var(--fg);
       font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
+      transition: background-color .15s ease, color .15s ease;
     }
     a { color: var(--npj-blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
     /* Top Universal Portal Bar */
     .portal-bar {
-      background: #0d131d;
-      color: #fff;
-      padding: 10px 20px;
+      background: var(--portal-bg);
+      color: var(--portal-fg);
+      padding: 10px 20px 10px 96px; /* reserve room for fixed CoSE map/brand toggle */
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 13.5px;
-      border-bottom: 1px solid #1f2937;
+      border-bottom: 1px solid var(--portal-border);
       position: sticky;
       top: 0;
-      z-index: 100;
+      z-index: 37;
       flex-wrap: wrap;
       gap: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    @media (max-width: 680px) {
+      .portal-bar { padding-left: 84px; }
     }
     .portal-nav {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
       flex-wrap: wrap;
     }
     .portal-brand {
@@ -82,14 +215,18 @@
       gap: 6px;
       letter-spacing: -0.01em;
     }
+    .portal-sep {
+      color: var(--portal-border);
+      user-select: none;
+    }
     .portal-link {
-      color: #d1d5db;
+      color: var(--portal-link);
       text-decoration: none;
       font-weight: 500;
       transition: color .15s;
     }
-    .portal-link:hover, .portal-link.active {
-      color: #ffffff;
+    .portal-link:hover {
+      color: var(--portal-link-hover);
       text-decoration: none;
     }
     .portal-link.active {
@@ -101,34 +238,47 @@
     .portal-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      flex-wrap: wrap;
     }
     .btn-pill {
-      background: #1e293b;
-      color: #f3f4f6;
-      border: 1px solid #334155;
-      padding: 5px 12px;
+      background: var(--portal-btn-bg);
+      color: var(--portal-btn-fg);
+      border: 1px solid var(--portal-btn-border);
+      padding: 6px 13px;
       border-radius: 999px;
       font-size: 12.5px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
       transition: all .15s;
     }
     .btn-pill:hover {
-      background: var(--npj-teal);
-      color: #0b131a;
       border-color: var(--npj-teal);
+      color: var(--npj-teal);
       text-decoration: none;
+      transform: translateY(-1px);
     }
     .btn-pill.primary {
       background: var(--npj-teal);
-      color: #0b131a;
+      color: var(--npj-teal-badge-fg);
       border-color: var(--npj-teal);
     }
     .btn-pill.primary:hover {
       filter: brightness(1.1);
+      color: var(--npj-teal-badge-fg);
+    }
+    .theme-toggle-btn {
+      font-weight: 700;
+      background: var(--portal-btn-bg);
+      color: var(--portal-btn-fg);
+    }
+    .theme-toggle-btn .theme-icon {
+      font-size: 14px;
+      line-height: 1;
     }
 
     /* Container */
@@ -599,16 +749,20 @@
   <div class="portal-bar">
     <div class="portal-nav">
       <span class="portal-brand">🌱 npj Microgravity | Spaceflight Plant Biophysics</span>
-      <span style="color:#4b5563;">|</span>
+      <span class="portal-sep">|</span>
       <a href="paper.html" class="portal-link active">📄 Manuscript (npj Microgravity PDF &amp; Article)</a>
-      <span style="color:#4b5563;">|</span>
+      <span class="portal-sep">|</span>
       <a href="explorer/" class="portal-link">🔬 Interactive FvCB &amp; Multi-Omics Explorer</a>
-      <span style="color:#4b5563;">|</span>
+      <span class="portal-sep">|</span>
       <a href="./" class="portal-link">🌊 Live 2-D LBM CFD Workbench</a>
-      <span style="color:#4b5563;">|</span>
+      <span class="portal-sep">|</span>
       <a href="https://github.com/dr-richard-barker/Spaceflight-Plant-Biophysics-Multiomics" target="_blank" class="portal-link">📦 GitHub &amp; Zenodo</a>
     </div>
     <div class="portal-actions">
+      <button id="theme-toggle" class="btn-pill theme-toggle-btn" onclick="toggleTheme()" aria-label="Toggle light or dark theme" title="Toggle light / dark mode">
+        <span class="theme-icon">🌙</span>
+        <span class="theme-label">Theme</span>
+      </button>
       <a href="Spaceflight_Biophysics_Multiomics_npj.pdf" download class="btn-pill primary">📥 Download npj PDF</a>
       <button onclick="copyCitation()" class="btn-pill">📋 Cite</button>
     </div>
@@ -1014,18 +1168,62 @@
       setTimeout(() => { t.style.display = 'none'; }, 3000);
     }
 
+    // Light / Dark Theme Toggle
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      const next = current === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+    }
+
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      try {
+        localStorage.setItem('barker.theme', theme);
+        localStorage.setItem('color-scheme', theme);
+      } catch(e){}
+      const meta = document.querySelector('meta[name="color-scheme"]');
+      if (meta) meta.content = theme;
+      
+      // Update theme toggle buttons across page
+      document.querySelectorAll('.theme-toggle-btn').forEach(btn => {
+        const icon = btn.querySelector('.theme-icon');
+        const label = btn.querySelector('.theme-label');
+        if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        if (label) label.textContent = theme === 'dark' ? 'Light' : 'Dark';
+        btn.setAttribute('title', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+      });
+
+      // Sync with CoSE theme.js topbar button if present
+      const coseBtn = document.querySelector('.cose-theme-btn');
+      if (coseBtn) {
+        coseBtn.setAttribute('title', theme === 'dark' ? 'Switch to light' : 'Switch to dark');
+      }
+    }
+
     // Hash handler on load
     window.addEventListener('DOMContentLoaded', () => {
+      const savedTheme = localStorage.getItem('barker.theme') || localStorage.getItem('color-scheme') ||
+        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      applyTheme(savedTheme);
+
       if (window.location.hash === '#article') {
         switchView('article');
       } else {
         switchView('pdf');
       }
     });
+
+    // Handle cross-tab storage changes
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'barker.theme' || e.key === 'color-scheme') {
+        if (e.newValue) applyTheme(e.newValue);
+      }
+    });
   </script>
 
-  <script src="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/sites.js"></script>
-  <script src="https://dr-richard-barker.github.io/Plant_response_to_radiation/cose/theme.js"></script>
+  <script src="cose/sites.js"></script>
+  <script src="cose/theme.js"></script>
   <script defer src="https://visitor-analytics.astrobotany.workers.dev/a.js"></script>
 </body>
 </html>

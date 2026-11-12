@@ -11,12 +11,12 @@
 
 /* one place to define the palette, expanded into each selector below */
 :root{
-  --cose-l-bg:#ffffff;   --cose-l-surface:#f7f9fc; --cose-l-surface2:#eef2f8;
-  --cose-l-text:#1a2230;  --cose-l-muted:#5a6473;  --cose-l-faint:#8892a3;
-  --cose-l-line:#e5e9f0;  --cose-l-accent:#3B6EA5; --cose-l-accent2:#3FB6A8;
-  --cose-d-bg:#0f141b;   --cose-d-surface:#161d27; --cose-d-surface2:#1f2937;
-  --cose-d-text:#e6ebf2;  --cose-d-muted:#9aa6b6;  --cose-d-faint:#6f7d9c;
-  --cose-d-line:#232c39;  --cose-d-accent:#6ea3d8; --cose-d-accent2:#54c9ba;
+  --cose-l-bg:#ffffff;   --cose-l-surface:#f8fafc; --cose-l-surface2:#f1f5f9;
+  --cose-l-text:#0f172a;  --cose-l-muted:#334155;  --cose-l-faint:#64748b;
+  --cose-l-line:#e2e8f0;  --cose-l-accent:#2563eb; --cose-l-accent2:#0d9488;
+  --cose-d-bg:#0b0f17;   --cose-d-surface:#131b26; --cose-d-surface2:#1a2433;
+  --cose-d-text:#f8fafc;  --cose-d-muted:#cbd5e1;  --cose-d-faint:#94a3b8;
+  --cose-d-line:#233145;  --cose-d-accent:#60a5fa; --cose-d-accent2:#2dd4bf;
 }
 
 /* ---- LIGHT (default on light OS, and when toggled to light) ---- */
